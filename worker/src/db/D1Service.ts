@@ -11,79 +11,97 @@ export class D1Service {
 
     /**
      * Получает пользователя по Telegram ID или создает нового, если не найден.
-     * @param tgUser Объект пользователя Telegram.
-     * @returns Объект пользователя из D1.
      */
     async getOrCreateUser(tgUser: TelegramUser): Promise<User> {
         const { id: tg_id, first_name, last_name } = tgUser;
         const fullName = last_name ? `${first_name} ${last_name}` : first_name;
 
-        // 1. Поиск пользователя
-        const { results } = await this.db.prepare(
-            'SELECT * FROM users WHERE tg_id = ?'
-        ).bind(tg_id).all<User>();
+        try {
+            // 1. Поиск пользователя
+            const result = await this.db.prepare(
+                'SELECT * FROM users WHERE tg_id = ?'
+            ).bind(tg_id).first<User>();
 
-        if (results && results.length > 0) {
-            // 2. Пользователь найден, обновляем last_activity
-            await this.db.prepare(
-                'UPDATE users SET last_activity = CURRENT_TIMESTAMP WHERE tg_id = ?'
-            ).bind(tg_id).run();
-            return results[0];
+            if (result) {
+                // 2. Пользователь найден, обновляем last_activity
+                await this.db.prepare(
+                    'UPDATE users SET last_activity = CURRENT_TIMESTAMP WHERE tg_id = ?'
+                ).bind(tg_id).run();
+                return result;
+            }
+
+            // 3. Пользователь не найден, создаем нового
+            const { success } = await this.db.prepare(
+                `INSERT INTO users (tg_id, full_name, last_activity, created_at) 
+                 VALUES (?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`
+            ).bind(tg_id, fullName).run();
+
+            if (!success) {
+                throw new Error('Failed to create new user in D1.');
+            }
+
+            // 4. Возвращаем созданного пользователя
+            const newUser = await this.db.prepare(
+                'SELECT * FROM users WHERE tg_id = ?'
+            ).bind(tg_id).first<User>();
+
+            if (!newUser) {
+                throw new Error('Failed to retrieve newly created user.');
+            }
+
+            return newUser;
+
+        } catch (error) {
+            console.error('Error in getOrCreateUser:', error);
+            // Возвращаем заглушку в случае ошибки
+            return {
+                tg_id: tg_id,
+                full_name: fullName,
+                fio: null,
+                phone: null,
+                city: null,
+                adress: null,
+                is_blocked: 0,
+                last_activity: new Date().toISOString(),
+                created_at: new Date().toISOString()
+            };
         }
-
-        // 3. Пользователь не найден, создаем нового
-        const { success } = await this.db.prepare(
-            `INSERT INTO users (tg_id, full_name, last_activity, created_at) 
-             VALUES (?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`
-        ).bind(tg_id, fullName).run();
-
-        if (!success) {
-            throw new Error('Failed to create new user in D1.');
-        }
-
-        // 4. Возвращаем созданного пользователя
-        const { results: newResults } = await this.db.prepare(
-            'SELECT * FROM users WHERE tg_id = ?'
-        ).bind(tg_id).all<User>();
-
-        if (!newResults || newResults.length === 0) {
-            throw new Error('Failed to retrieve newly created user.');
-        }
-
-        return newResults[0];
     }
 
     /**
      * Записывает сообщение в историю диалогов.
-     * @param tg_id Telegram ID пользователя.
-     * @param role Роль сообщения ('user', 'assistant', 'system').
-     * @param content Текст сообщения.
-     * @param metadata Дополнительные данные (JSON-строка).
      */
     async logDialog(tg_id: number, role: Dialog['role'], content: string, metadata: string | null = null): Promise<void> {
-        const session_id = `tg_${tg_id}_${Date.now()}`; // Простая генерация session_id
-        
-        await this.db.prepare(
-            `INSERT INTO dialogs (session_id, tg_id, role, content, metadata, timestamp) 
-             VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`
-        ).bind(session_id, tg_id, role, content, metadata).run();
+        try {
+            const session_id = `tg_${tg_id}_${Date.now()}`;
+            
+            await this.db.prepare(
+                `INSERT INTO dialogs (session_id, tg_id, role, content, metadata, timestamp) 
+                 VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`
+            ).bind(session_id, tg_id, role, content, metadata).run();
+        } catch (error) {
+            console.error('Error in logDialog:', error);
+            // Игнорируем ошибки логирования, чтобы не ломать основной функционал
+        }
     }
 
     /**
      * Получает последние N сообщений для формирования контекста.
-     * @param tg_id Telegram ID пользователя.
-     * @param limit Максимальное количество сообщений.
-     * @returns Массив объектов диалогов.
      */
     async getDialogHistory(tg_id: number, limit: number = 10): Promise<Dialog[]> {
-        const { results } = await this.db.prepare(
-            `SELECT * FROM dialogs 
-             WHERE tg_id = ? 
-             ORDER BY id DESC 
-             LIMIT ?`
-        ).bind(tg_id, limit).all<Dialog>();
+        try {
+            const result = await this.db.prepare(
+                `SELECT * FROM dialogs 
+                 WHERE tg_id = ? 
+                 ORDER BY id DESC 
+                 LIMIT ?`
+            ).bind(tg_id, limit).all<Dialog>();
 
-        // Возвращаем в хронологическом порядке
-        return results ? results.reverse() : [];
+            // Возвращаем в хронологическом порядке
+            return result.results ? result.results.reverse() : [];
+        } catch (error) {
+            console.error('Error in getDialogHistory:', error);
+            return [];
+        }
     }
 }

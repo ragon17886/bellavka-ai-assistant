@@ -14,20 +14,21 @@ export interface Env {
 }
 
 export default {
-  async fetch(
-    request: Request,
-    env: Env,
-    ctx: ExecutionContext
-  ): Promise<Response> {
-    const url = new URL(request.url);
+	async fetch(
+		request: Request,
+		env: Env,
+		ctx: ExecutionContext
+	): Promise<Response> {
+		const url = new URL(request.url);
 
-    if (url.pathname === '/webhook') {
-      const dbService = new D1Service(env);
-      return handleTelegramWebhook(request, env, ctx, dbService);
-    }
+		// Обрабатываем вебхук как на корневом пути, так и на /webhook
+		if (url.pathname === '/webhook' || url.pathname === '/') {
+			const dbService = new D1Service(env);
+			return handleTelegramWebhook(request, env, ctx, dbService);
+		}
 
-    return new Response('Bellavka AI Assistant Worker is running.', { status: 200 });
-  },
+		return new Response('Bellavka AI Assistant Worker is running.', { status: 200 });
+	},
 };
 
 async function handleTelegramWebhook(request: Request, env: Env, ctx: ExecutionContext, dbService: D1Service): Promise<Response> {
