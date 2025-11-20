@@ -4,7 +4,7 @@ import { Dialog } from '../db/types';
 
 export class GeminiService {
     private ai: GoogleGenAI;
-    private model: string = 'gemini-2.0-flash-exp'; // Используем доступную модель
+    private model: string = 'gemini-2.5-flash-lite';
 
     constructor(env: Env) {
         if (!env.GEMINI_API_KEY) {
@@ -22,7 +22,7 @@ export class GeminiService {
         }
         
         return history
-            .filter(dialog => dialog.role !== 'system') // Игнорируем системные сообщения
+            .filter(dialog => dialog.role !== 'system')
             .map(dialog => {
                 const role = dialog.role === 'assistant' ? 'model' : 'user';
                 return {
@@ -38,12 +38,9 @@ export class GeminiService {
     async generateTextResponse(systemInstruction: string, history: Dialog[]): Promise<string> {
         try {
             console.log('Generating response with Gemini...');
-            console.log('History length:', history?.length || 0);
             
             const contents = this.mapDialogsToContents(history);
-            console.log('Contents length after mapping:', contents.length);
             
-            // Если история пуста, создаем базовый контент
             if (contents.length === 0) {
                 return "Здравствуйте! Я ваш AI-ассистент Bellavka. Чем могу помочь?";
             }
@@ -58,13 +55,11 @@ export class GeminiService {
                 }
             });
 
-            console.log('Gemini response received');
             return response.text?.trim() || "Извините, не удалось сгенерировать ответ.";
 
         } catch (error: any) {
             console.error('Gemini API Error:', error);
             
-            // Более детальная обработка ошибок
             if (error.message?.includes('API key')) {
                 return "Ошибка: Неверный API ключ Gemini.";
             } else if (error.message?.includes('quota')) {
