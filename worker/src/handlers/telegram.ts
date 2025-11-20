@@ -1,17 +1,44 @@
 import { Env } from '../index';
 import { D1Service } from '../db/D1Service';
 import { TelegramUser } from '../db/types';
-import { GeminiService } from '../assistants/GeminiService'; // <-- НОВЫЙ ИМПОРТ
+import { GeminiService } from '../assistants/GeminiService';
 
-// Типы для Telegram (упрощенные)
+// Типы для Telegram
 interface TelegramMessage {
-// ... (остальной код без изменений)
+    message_id: number;
+    from: TelegramUser;
+    chat: {
+        id: number;
+    };
+    text?: string;
+    photo?: Array<{
+        file_id: string;
+        file_size: number;
+    }>;
+}
+
+/**
+ * Отправка сообщения в Telegram
+ */
+async function sendMessage(chatId: number, text: string, env: Env): Promise<void> {
+    try {
+        await fetch(`https://api.telegram.org/bot${env.TELEGRAM_BOT_TOKEN}/sendMessage`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                chat_id: chatId,
+                text: text,
+            }),
+        });
+    } catch (error) {
+        console.error('Error sending message to Telegram:', error);
+    }
+}
 
 /**
  * Основной обработчик входящих сообщений Telegram.
- * @param message Объект сообщения Telegram
- * @param env Окружение Worker
- * @param dbService Сервис для работы с D1
  */
 export async function handleMessage(message: TelegramMessage, env: Env, dbService: D1Service): Promise<void> {
     const chatId = message.chat.id;
@@ -24,45 +51,31 @@ export async function handleMessage(message: TelegramMessage, env: Env, dbServic
     
     if (text) {
         await dbService.logDialog(user.tg_id, 'user', text);
-    } else if (isPhoto) {
+    } else if (isPhoto && message.photo) {
         // В MVP без R2 мы просто логируем file_id, но не сохраняем сам файл
-        const largestPhoto = message.photo.reduce((prev, current) => (prev.file_size > current.file_size) ? prev : current);
+        const largestPhoto = message.photo.reduce((prev, current) => 
+            (prev.file_size > current.file_size) ? prev : current
+        );
         await dbService.logDialog(user.tg_id, 'user', 'Photo received', JSON.stringify({ file_id: largestPhoto.file_id }));
     }
 
     // 2. Обработка команды /start
     if (text === '/start') {
-        // ... (код без изменений)
+        await sendMessage(chatId, `Добро пожаловать, ${user.full_name}! Я ваш AI-ассистент Bellavka.`, env);
         return;
     }
 
     // 3. Обработка фото
     if (isPhoto) {
-        // ... (код без изменений)
+        await sendMessage(chatId, 'Извините, обработка фото временно недоступна.', env);
         return;
     }
 
-    // 4. Обработка текстового запроса (ОСНОВНАЯ ЛОГИКА)
+    // 4. Обработка текстового запроса
     if (text) {
-        // 1. Получаем историю диалогов для контекста
-        const history = await dbService.getDialogHistory(user.tg_id, 10); // Последние 10 сообщений
-
-        // 2. Определяем системный промпт (пока используем заглушку)
-        // В будущем здесь будет логика маршрутизации к Ассистенту-продавцу, Ассистенту-доставки и т.д.
-        const systemInstruction = `Вы — AI-ассистент Bellavka. Ваш стиль общения — вежливый, официальный, обращение на Вы.
-Ваша задача — отвечать на вопросы пользователя о товарах и услугах Bellavka.
-Используйте историю диалога для поддержания контекста.
-Если пользователь спрашивает о товаре, который Вы не можете найти, вежливо предложите поискать по фото или дать более точное описание.
-Ваш ответ должен быть кратким и по существу.`;
-
-        // 3. Генерируем ответ с помощью Gemini
-        const geminiService = new GeminiService(env);
-        const responseText = await geminiService.generateTextResponse(systemInstruction, history);
-
-        // 4. Логируем ответ ассистента
+        // Временный простой ответ
+        const responseText = `Вы сказали: "${text}". В будущем здесь будет AI-ответ.`;
         await dbService.logDialog(user.tg_id, 'assistant', responseText);
-
-        // 5. Отправляем ответ пользователю
         await sendMessage(chatId, responseText, env);
         return;
     }
