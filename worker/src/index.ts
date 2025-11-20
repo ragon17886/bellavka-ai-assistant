@@ -4,6 +4,7 @@
 
 import { handleMessage } from './handlers/telegram';
 import { D1Service } from './db/D1Service';
+import { handleAdminRequest } from './api/admin';
 
 export interface Env {
   // D1 Database Binding
@@ -20,6 +21,11 @@ export default {
 		ctx: ExecutionContext
 	): Promise<Response> {
 		const url = new URL(request.url);
+
+                // Админ API
+                if (url.pathname.startsWith('/api/admin/')) {
+                    return handleAdminRequest(request, env, url.pathname);
+                }
 
 		// Обрабатываем вебхук как на корневом пути, так и на /webhook
 		if (url.pathname === '/webhook' || url.pathname === '/') {

@@ -104,4 +104,76 @@ export class D1Service {
             return [];
         }
     }
+
+// Ассистенты
+  async getAssistants(): Promise<Assistant[]> {
+    try {
+      const result = await this.db.prepare(
+        'SELECT * FROM assistants ORDER BY created_at DESC'
+      ).all<Assistant>();
+      return result.results || [];
+    } catch (error) {
+      console.error('Error getting assistants:', error);
+      return [];
+    }
+  }
+
+  async createAssistant(assistant: Omit<Assistant, 'id' | 'created_at' | 'updated_at'>): Promise<Assistant> {
+    const id = `assistant_${Date.now()}`;
+    const result = await this.db.prepare(
+      `INSERT INTO assistants (id, name, type, system_prompt, tov_snippet, handoff_rules, is_active)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`
+    ).bind(
+      id,
+      assistant.name,
+      assistant.type,
+      assistant.system_prompt,
+      assistant.tov_snippet,
+      assistant.handoff_rules,
+      assistant.is_active ? 1 : 0
+    ).run();
+
+    const newAssistant = await this.db.prepare(
+      'SELECT * FROM assistants WHERE id = ?'
+    ).bind(id).first<Assistant>();
+
+    return newAssistant!;
+  }
+
+  // Диалоги
+  async getDialogsWithUsers(page: number = 1, limit: number = 50): Promise<any[]> {
+    try {
+      const offset = (page - 1) * limit;
+      const result = await this.db.prepare(`
+        SELECT d.*, u.full_name, u.tg_id 
+        FROM dialogs d 
+        LEFT JOIN users u ON d.tg_id = u.tg_id 
+        ORDER BY d.timestamp DESC 
+        LIMIT ? OFFSET ?
+      `).bind(limit, offset).all();
+      
+      return result.results || [];
+    } catch (error) {
+      console.error('Error getting dialogs with users:', error);
+      return [];
+    }
+  }
+
+  async getUserDialogs(tgId: number): Promise<any[]> {
+    try {
+      const result = await this.db.prepare(`
+        SELECT d.*, u.full_name 
+        FROM dialogs d 
+        LEFT JOIN users u ON d.tg_id = u.tg_id 
+        WHERE d.tg_id = ? 
+        ORDER BY d.timestamp ASC
+      `).bind(tgId).all();
+      
+      return result.results || [];
+    } catch (error) {
+      console.error('Error getting user dialogs:', error);
+      return [];
+    }
+  }
+
 }
