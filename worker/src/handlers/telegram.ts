@@ -47,7 +47,7 @@ export async function handleMessage(message: TelegramMessage, env: Env, dbServic
     const isPhoto = message.photo && message.photo.length > 0;
 
     // 1. Получение или создание пользователя и логирование сообщения
-    const user = await dbService.getOrCreateUser(tgUser);
+/*    const user = await dbService.getOrCreateUser(tgUser);
     
     if (text) {
         await dbService.logDialog(user.tg_id, 'user', text);
@@ -57,6 +57,19 @@ export async function handleMessage(message: TelegramMessage, env: Env, dbServic
             (prev.file_size > current.file_size) ? prev : current
         );
         await dbService.logDialog(user.tg_id, 'user', 'Photo received', JSON.stringify({ file_id: largestPhoto.file_id }));
+    }
+*/
+
+    console.log(`Message from ${tgUser.first_name} (${chatId}): ${text}`);
+
+    // Простой echo-бот
+    if (text) {
+        const echoText = `Эхо: ${text}`;
+        console.log('Sending echo:', echoText);
+        await sendMessage(chatId, echoText, env);
+    } else {
+        console.log('No text in message');
+        await sendMessage(chatId, 'Я понимаю только текстовые сообщения', env);
     }
 
     // 2. Обработка команды /start

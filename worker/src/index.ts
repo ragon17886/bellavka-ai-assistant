@@ -31,23 +31,28 @@ export default {
 };
 
 async function handleTelegramWebhook(request: Request, env: Env, ctx: ExecutionContext, dbService: D1Service): Promise<Response> {
+    console.log('Webhook called - Method:', request.method);
+    
     if (request.method !== 'POST') {
+        console.log('Wrong method - returning 405');
         return new Response('Method Not Allowed', { status: 405 });
     }
 
     try {
-        const update: any = await request.json(); // Добавьте тип any
+        const update: any = await request.json();
+        console.log('Received update:', JSON.stringify(update));
         
         // Проверка на наличие сообщения
         if (update.message) {
+            console.log('Processing message from user:', update.message.from.id);
             ctx.waitUntil(handleMessage(update.message, env, dbService));
+        } else {
+            console.log('No message in update');
         }
         
-        // Всегда возвращаем 200 OK, чтобы Telegram не переотправлял запрос
         return new Response('OK', { status: 200 });
     } catch (error) {
         console.error('Error processing webhook:', error);
-        // В случае ошибки возвращаем 200, чтобы не блокировать Telegram
         return new Response('OK (Error handled)', { status: 200 });
     }
 }
