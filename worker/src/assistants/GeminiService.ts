@@ -17,6 +17,10 @@ export class GeminiService {
      * Преобразует историю диалогов из D1 в формат, понятный Gemini API.
      */
     private mapDialogsToContents(history: Dialog[]): Content[] {
+        if (!history || history.length === 0) {
+            return [];
+        }
+        
         return history
             .filter(dialog => dialog.role !== 'system') // Игнорируем системные сообщения
             .map(dialog => {
@@ -34,9 +38,16 @@ export class GeminiService {
     async generateTextResponse(systemInstruction: string, history: Dialog[]): Promise<string> {
         try {
             console.log('Generating response with Gemini...');
+            console.log('History length:', history?.length || 0);
             
             const contents = this.mapDialogsToContents(history);
+            console.log('Contents length after mapping:', contents.length);
             
+            // Если история пуста, создаем базовый контент
+            if (contents.length === 0) {
+                return "Здравствуйте! Я ваш AI-ассистент Bellavka. Чем могу помочь?";
+            }
+
             const response = await this.ai.models.generateContent({
                 model: this.model,
                 contents: contents,
@@ -58,9 +69,39 @@ export class GeminiService {
                 return "Ошибка: Неверный API ключ Gemini.";
             } else if (error.message?.includes('quota')) {
                 return "Превышена квота API. Попробуйте позже.";
+            } else if (error.message?.includes('contents are required')) {
+                return "Здравствуйте! Расскажите, чем могу помочь?";
             } else {
                 return "Извините, произошла ошибка при обращении к AI-ассистенту. Попробуйте повторить запрос позже.";
             }
+        }
+    }
+
+    /**
+     * Упрощенная версия для быстрого ответа без истории
+     */
+    async generateQuickResponse(userMessage: string, systemInstruction: string): Promise<string> {
+        try {
+            const response = await this.ai.models.generateContent({
+                model: this.model,
+                contents: [
+                    {
+                        role: 'user',
+                        parts: [{ text: userMessage }]
+                    }
+                ],
+                config: {
+                    systemInstruction: systemInstruction,
+                    temperature: 0.7,
+                    maxOutputTokens: 1024,
+                }
+            });
+
+            return response.text?.trim() || "Не удалось сгенерировать ответ";
+
+        } catch (error) {
+            console.error('Gemini quick response error:', error);
+            return "Привет! Я AI-ассистент Bellavka. Задайте ваш вопрос!";
         }
     }
 }
