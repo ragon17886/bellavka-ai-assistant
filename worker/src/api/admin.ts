@@ -1,16 +1,8 @@
 import { D1Service } from '../db/D1Service';
+import { Env } from '../index';
+import { Assistant } from '../db/types';
 
-export interface Assistant {
-  id: string;
-  name: string;
-  type: 'ai' | 'function';
-  system_prompt: string;
-  tov_snippet?: string;
-  handoff_rules?: string;
-  is_active: boolean;
-  created_at: string;
-  updated_at: string;
-}
+// Удалите дублирующее определение Assistant - используем импорт
 
 export async function handleAdminRequest(request: Request, env: Env, pathname: string): Promise<Response> {
   const dbService = new D1Service(env);
@@ -40,7 +32,9 @@ export async function handleAdminRequest(request: Request, env: Env, pathname: s
     // Конкретный диалог
     if (pathname.startsWith('/api/admin/dialogs/')) {
       const tgId = pathname.split('/').pop();
-      return await handleUserDialogs(request, dbService, parseInt(tgId!), corsHeaders);
+      if (tgId) {
+        return await handleUserDialogs(request, dbService, parseInt(tgId), corsHeaders);
+      }
     }
 
     return new Response('Not Found', { status: 404, headers: corsHeaders });
@@ -52,6 +46,7 @@ export async function handleAdminRequest(request: Request, env: Env, pathname: s
     });
   }
 }
+
 
 // Обработчики для ассистентов
 async function handleAssistants(request: Request, dbService: D1Service, corsHeaders: any): Promise<Response> {

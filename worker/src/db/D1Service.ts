@@ -9,9 +9,7 @@ export class D1Service {
         this.db = env.DB;
     }
 
-    /**
-     * Получает пользователя по Telegram ID или создает нового, если не найден.
-     */
+
     async getOrCreateUser(tgUser: TelegramUser): Promise<User> {
         const { id: tg_id, first_name, last_name } = tgUser;
         const fullName = last_name ? `${first_name} ${last_name}` : first_name;
@@ -106,39 +104,44 @@ export class D1Service {
     }
 
 // Ассистенты
-  async getAssistants(): Promise<Assistant[]> {
-    try {
-      const result = await this.db.prepare(
-        'SELECT * FROM assistants ORDER BY created_at DESC'
-      ).all<Assistant>();
-      return result.results || [];
-    } catch (error) {
-      console.error('Error getting assistants:', error);
-      return [];
+    // Ассистенты
+    async getAssistants(): Promise<Assistant[]> {
+        try {
+            const result = await this.db.prepare(
+                'SELECT * FROM assistants ORDER BY created_at DESC'
+            ).all<Assistant>();
+            return result.results || [];
+        } catch (error) {
+            console.error('Error getting assistants:', error);
+            return [];
+        }
     }
-  }
 
-  async createAssistant(assistant: Omit<Assistant, 'id' | 'created_at' | 'updated_at'>): Promise<Assistant> {
-    const id = `assistant_${Date.now()}`;
-    const result = await this.db.prepare(
-      `INSERT INTO assistants (id, name, type, system_prompt, tov_snippet, handoff_rules, is_active)
-       VALUES (?, ?, ?, ?, ?, ?, ?)`
-    ).bind(
-      id,
-      assistant.name,
-      assistant.type,
-      assistant.system_prompt,
-      assistant.tov_snippet,
-      assistant.handoff_rules,
-      assistant.is_active ? 1 : 0
-    ).run();
+    async createAssistant(assistant: Omit<Assistant, 'id' | 'created_at' | 'updated_at'>): Promise<Assistant> {
+        const id = `assistant_${Date.now()}`;
+        await this.db.prepare(
+            `INSERT INTO assistants (id, name, type, system_prompt, tov_snippet, handoff_rules, is_active)
+             VALUES (?, ?, ?, ?, ?, ?, ?)`
+        ).bind(
+            id,
+            assistant.name,
+            assistant.type,
+            assistant.system_prompt,
+            assistant.tov_snippet || null,
+            assistant.handoff_rules || null,
+            assistant.is_active ? 1 : 0
+        ).run();
 
-    const newAssistant = await this.db.prepare(
-      'SELECT * FROM assistants WHERE id = ?'
-    ).bind(id).first<Assistant>();
+        const newAssistant = await this.db.prepare(
+            'SELECT * FROM assistants WHERE id = ?'
+        ).bind(id).first<Assistant>();
 
-    return newAssistant!;
-  }
+        if (!newAssistant) {
+            throw new Error('Failed to create assistant');
+        }
+
+        return newAssistant;
+    }
 
   // Диалоги
   async getDialogsWithUsers(page: number = 1, limit: number = 50): Promise<any[]> {

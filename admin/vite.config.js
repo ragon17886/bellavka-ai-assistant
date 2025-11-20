@@ -9,5 +9,8 @@ export default defineConfig({
   },
   server: {
     port: 3000
-  }
+  },
+  // Добавьте эту секцию для правильного разрешения entry point
+  root: '.',
+  publicDir: 'public'
 })
