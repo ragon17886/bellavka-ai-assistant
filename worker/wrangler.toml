@@ -14,7 +14,7 @@ command = "npm install && npm run build"
 [build.upload]
 format = "modules"
 
-[observability]
+[observability] # log in CloudFlare
 [observability.logs]
 enabled = true
 head_sampling_rate = 1
