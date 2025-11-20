@@ -1,0 +1,22 @@
+name = "bellavka-ai-assistant-worker"
+main = "src/index.ts"
+compatibility_date = "2024-11-17"
+compatibility_flags = ["nodejs_compat"]
+
+[d1_databases]
+binding = "DB"
+database_name = "bellavka-assistant-db"
+database_id = "25ef7cf9-9d50-4f74-9043-6c72f166a5dc"
+
+[build]
+command = "npm install && npm run build"
+
+[build.upload]
+format = "modules"
+
+[observability]
+[observability.logs]
+enabled = true
+head_sampling_rate = 1
+invocation_logs = true
+persist = true
