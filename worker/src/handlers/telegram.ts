@@ -47,9 +47,9 @@ export async function handleMessage(message: TelegramMessage, env: Env, dbServic
     const isPhoto = message.photo && message.photo.length > 0;
 
     // 1. Получение или создание пользователя и логирование сообщения
-/*    const user = await dbService.getOrCreateUser(tgUser);
+    const user = await dbService.getOrCreateUser(tgUser);
     
-    if (text) {
+/*    if (text) {
         await dbService.logDialog(user.tg_id, 'user', text);
     } else if (isPhoto && message.photo) {
         // В MVP без R2 мы просто логируем file_id, но не сохраняем сам файл
