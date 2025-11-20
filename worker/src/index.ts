@@ -30,29 +30,24 @@ export default {
   },
 };
 
-async function handleTelegramWebhook(
-  request: Request, 
-  env: Env, 
-  ctx: ExecutionContext, 
-  dbService: D1Service
-): Promise<Response> {
-  if (request.method !== 'POST') {
-    return new Response('Method Not Allowed', { status: 405 });
-  }
-
-  try {
-    const update = await request.json();
-    
-    // Проверка на наличие сообщения
-    if (update.message) {
-      ctx.waitUntil(handleMessage(update.message, env, dbService));
+async function handleTelegramWebhook(request: Request, env: Env, ctx: ExecutionContext, dbService: D1Service): Promise<Response> {
+    if (request.method !== 'POST') {
+        return new Response('Method Not Allowed', { status: 405 });
     }
-    
-    // Всегда возвращаем 200 OK, чтобы Telegram не переотправлял запрос
-    return new Response('OK', { status: 200 });
-  } catch (error) {
-    console.error('Error processing webhook:', error);
-    // В случае ошибки возвращаем 200, чтобы не блокировать Telegram
-    return new Response('OK (Error handled)', { status: 200 });
-  }
+
+    try {
+        const update: any = await request.json(); // Добавьте тип any
+        
+        // Проверка на наличие сообщения
+        if (update.message) {
+            ctx.waitUntil(handleMessage(update.message, env, dbService));
+        }
+        
+        // Всегда возвращаем 200 OK, чтобы Telegram не переотправлял запрос
+        return new Response('OK', { status: 200 });
+    } catch (error) {
+        console.error('Error processing webhook:', error);
+        // В случае ошибки возвращаем 200, чтобы не блокировать Telegram
+        return new Response('OK (Error handled)', { status: 200 });
+    }
 }

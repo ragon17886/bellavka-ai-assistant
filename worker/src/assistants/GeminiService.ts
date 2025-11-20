@@ -1,4 +1,4 @@
-import { GoogleGenAI, Content, Part } from '@google/genai';
+/* import { GoogleGenAI, Content, Part } from '@google/genai';
 import { Env } from '../index';
 import { Dialog } from '../db/types';
 
@@ -97,3 +97,4 @@ export class GeminiService {
         }
     }
 }
+*/

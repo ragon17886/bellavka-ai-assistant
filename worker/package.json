@@ -4,9 +4,9 @@
   "description": "Cloudflare Worker for Bellavka AI Telegram Assistant",
   "main": "src/index.ts",
   "scripts": {
-    "start": "wrangler dev",
+    "build": "tsc --skipLibCheck",
     "deploy": "wrangler deploy",
-    "build": "tsc"
+    "start": "wrangler dev"
   },
   "keywords": [
     "cloudflare",

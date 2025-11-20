@@ -1,7 +1,7 @@
 import { Env } from '../index';
 import { D1Service } from '../db/D1Service';
 import { TelegramUser } from '../db/types';
-import { GeminiService } from '../assistants/GeminiService';
+// import { GeminiService } from '../assistants/GeminiService';
 
 // Типы для Telegram
 interface TelegramMessage {
@@ -71,14 +71,14 @@ export async function handleMessage(message: TelegramMessage, env: Env, dbServic
         return;
     }
 
-    // 4. Обработка текстового запроса
-    if (text) {
-        // Временный простой ответ
-        const responseText = `Вы сказали: "${text}". В будущем здесь будет AI-ответ.`;
-        await dbService.logDialog(user.tg_id, 'assistant', responseText);
-        await sendMessage(chatId, responseText, env);
-        return;
-    }
+// 4. Обработка текстового запроса
+if (text) {
+    // Временный простой ответ
+    const responseText = `Вы сказали: "${text}". В будущем здесь будет AI-ответ от Gemini.`;
+    await dbService.logDialog(user.tg_id, 'assistant', responseText);
+    await sendMessage(chatId, responseText, env);
+    return;
+}
 
     // 5. Обработка других типов сообщений
     await sendMessage(chatId, `*${user.full_name}*, я могу обрабатывать только текст и фото.`, env);
