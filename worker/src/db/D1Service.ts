@@ -1,5 +1,6 @@
 import { Env } from '../index';
 import { User, Dialog, TelegramUser } from './types';
+import type { D1Database } from '@cloudflare/workers-types';
 
 export class D1Service {
     private db: D1Database;
