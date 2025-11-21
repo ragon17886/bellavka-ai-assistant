@@ -1,38 +1,28 @@
-name: Deploy React Admin to GitHub Pages
+name: Deploy Admin
 
 on:
   push:
-    branches: [ main ]
-    paths: 
-      - 'admin/**'
-      - '.github/workflows/deploy.yml'
+    branches: [main]
 
 jobs:
-  build-and-deploy:
+  deploy:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/checkout@v2
+      
+      - name: Setup Node
+        uses: actions/setup-node@v2
         with:
-          node-version: '18'
-          # Убрали cache - он вызывает ошибку
+          node-version: '16'
           
-      - name: Install dependencies
+      - name: Build Admin
         run: |
           cd admin
           npm install
-          
-      - name: Build project
-        run: |
-          cd admin
           npm run build
           
-      - name: Deploy to GitHub Pages
+      - name: Deploy
         uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./docs
-          force_orphan: true  # Очищает историю деплоев
