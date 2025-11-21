@@ -7,12 +7,12 @@ import { Assistant } from '../db/types';
 export async function handleAdminRequest(request: Request, env: Env, pathname: string): Promise<Response> {
   const dbService = new D1Service(env);
   
-  // CORS headers
-  const corsHeaders = {
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type',
-  };
+// CORS headers для GitHub Pages
+const corsHeaders = {
+  'Access-Control-Allow-Origin': 'https://ragon17886.github.io', // или '*' для всех
+  'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type',
+};
 
   if (request.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });

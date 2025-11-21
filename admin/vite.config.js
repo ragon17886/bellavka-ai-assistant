@@ -3,14 +3,9 @@ import react from '@vitejs/plugin-react'
 
 export default defineConfig({
   plugins: [react()],
+  base: '/bellavka-ai-assistant/', // важно для GitHub Pages
   build: {
-    outDir: 'dist',
-    sourcemap: true
-  },
-  server: {
-    port: 3000
-  },
-  // Добавьте эту секцию для правильного разрешения entry point
-  root: '.',
-  publicDir: 'public'
+    outDir: '../docs',
+    emptyOutDir: true
+  }
 })

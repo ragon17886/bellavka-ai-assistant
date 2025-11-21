@@ -1,12 +1,13 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
+import { HashRouter } from 'react-router-dom'; // альтернатива для GitHub Pages
 import AssistantsPage from './pages/AssistantsPage';
 import DialogsPage from './pages/DialogsPage';
 import './styles/App.css';
 
 function App() {
   return (
-    <Router>
+    <HashRouter>
       <div className="app">
         <nav className="sidebar">
           <h1>Bellavka Admin</h1>
@@ -24,7 +25,7 @@ function App() {
           </Routes>
         </main>
       </div>
-    </Router>
+    </HashRouter>
   );
 }
 
