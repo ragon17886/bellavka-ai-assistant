@@ -1,143 +1,80 @@
 import { D1Service } from '../db/D1Service';
 import { Env } from '../index';
-import { Assistant } from '../db/types';
-
-// Удалите дублирующее определение Assistant - используем импорт
 
 export async function handleAdminRequest(request: Request, env: Env, pathname: string): Promise<Response> {
-  const dbService = new D1Service(env);
+  console.log('📨 Admin API called:', pathname, request.method);
   
-// CORS headers для GitHub Pages
-const corsHeaders = {
-  'Access-Control-Allow-Origin': 'https://ragon17886.github.io', // или '*' для всех
-  'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type',
-};
+  const corsHeaders = {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type',
+  };
 
   if (request.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    // Ассистенты
-    if (pathname === '/api/admin/assistants') {
-      return await handleAssistants(request, dbService, corsHeaders);
-    }
-    
-    // Диалоги
-    if (pathname === '/api/admin/dialogs') {
-      return await handleDialogs(request, dbService, corsHeaders);
-    }
-    
-    // Конкретный диалог
-    if (pathname.startsWith('/api/admin/dialogs/')) {
-      const tgId = pathname.split('/').pop();
-      if (tgId) {
-        return await handleUserDialogs(request, dbService, parseInt(tgId), corsHeaders);
-      }
-    }
+    const dbService = new D1Service(env);
 
-    if (pathname === '/api/admin/stats') {
-     return await handleStats(request, dbService, corsHeaders);
-    }
-
-    if (pathname === '/api/admin/direct-query') {
+    // 🔧 ДИРЕКТ SQL ЗАПРОСЫ - самый важный endpoint
+    if (pathname === '/api/admin/query' || pathname === '/api/admin/direct-query') {
       return await handleDirectQuery(request, dbService, corsHeaders);
     }
 
-    return new Response('Not Found', { status: 404, headers: corsHeaders });
+    // 📊 СТАТИСТИКА
+    if (pathname === '/api/admin/stats') {
+      return await handleStats(request, dbService, corsHeaders);
+    }
+
+    // 👥 ПОЛЬЗОВАТЕЛИ
+    if (pathname === '/api/admin/users') {
+      return await handleUsers(request, dbService, corsHeaders);
+    }
+
+    // 💬 ДИАЛОГИ
+    if (pathname === '/api/admin/dialogs') {
+      return await handleDialogs(request, dbService, corsHeaders);
+    }
+
+    // 🤖 АССИСТЕНТЫ
+    if (pathname === '/api/admin/assistants') {
+      return await handleAssistants(request, dbService, corsHeaders);
+    }
+
+    console.log('❌ Endpoint not found:', pathname);
+    return new Response(JSON.stringify({ error: 'Endpoint not found', path: pathname }), {
+      status: 404,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    });
+
   } catch (error) {
-    console.error('Admin API error:', error);
-    return new Response(JSON.stringify({ error: 'Internal Server Error' }), {
+    console.error('💥 Admin API error:', error);
+    return new Response(JSON.stringify({ error: 'Internal Server Error', details: error.message }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     });
   }
 }
 
-
-// Обработчики для ассистентов
-async function handleAssistants(request: Request, dbService: D1Service, corsHeaders: any): Promise<Response> {
-  if (request.method === 'GET') {
-    const assistants = await dbService.getAssistants();
-    return new Response(JSON.stringify(assistants), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-    });
-  }
-  
-  if (request.method === 'POST') {
-    const assistant: Omit<Assistant, 'id' | 'created_at' | 'updated_at'> = await request.json();
-    const result = await dbService.createAssistant(assistant);
-    return new Response(JSON.stringify(result), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-    });
-  }
-
-  return new Response('Method Not Allowed', { status: 405, headers: corsHeaders });
-}
-
-// Обработчики для диалогов
-async function handleDialogs(request: Request, dbService: D1Service, corsHeaders: any): Promise<Response> {
-  if (request.method === 'GET') {
-    const { searchParams } = new URL(request.url);
-    const page = parseInt(searchParams.get('page') || '1');
-    const limit = parseInt(searchParams.get('limit') || '50');
-    
-    const dialogs = await dbService.getDialogsWithUsers(page, limit);
-    return new Response(JSON.stringify(dialogs), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-    });
-  }
-
-  return new Response('Method Not Allowed', { status: 405, headers: corsHeaders });
-}
-
-async function handleUserDialogs(request: Request, dbService: D1Service, tgId: number, corsHeaders: any): Promise<Response> {
-  if (request.method === 'GET') {
-    const dialogs = await dbService.getUserDialogs(tgId);
-    return new Response(JSON.stringify(dialogs), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-    });
-  }
-
-  return new Response('Method Not Allowed', { status: 405, headers: corsHeaders });
-}
-
-// Новый обработчик статистики
-async function handleStats(request: Request, dbService: D1Service, corsHeaders: any): Promise<Response> {
-  if (request.method === 'GET') {
-    try {
-      const stats = await dbService.getSimpleStats();
-      return new Response(JSON.stringify(stats), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      });
-    } catch (error) {
-      return new Response(JSON.stringify({ error: 'Failed to get stats' }), {
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      });
-    }
-  }
-  
-  return new Response('Method Not Allowed', { status: 405, headers: corsHeaders });
-}
-
-// Новый обработчик для прямых SQL запросов
+// 🎯 ГЛАВНЫЙ МЕТОД - прямые SQL запросы
 async function handleDirectQuery(request: Request, dbService: D1Service, corsHeaders: any): Promise<Response> {
   if (request.method === 'POST') {
     try {
       const { query } = await request.json();
       
       if (!query) {
-        return new Response(JSON.stringify({ success: false, error: 'Query is required' }), {
+        return new Response(JSON.stringify({ 
+          success: false, 
+          error: 'Query is required' 
+        }), {
           status: 400,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         });
       }
 
-      console.log('Executing direct query:', query);
+      console.log('🛠️ Executing SQL:', query);
       
-      // Выполняем запрос напрямую через D1
       const result = await dbService.db.prepare(query).all();
       
       return new Response(JSON.stringify({ 
@@ -149,7 +86,7 @@ async function handleDirectQuery(request: Request, dbService: D1Service, corsHea
       });
       
     } catch (error: any) {
-      console.error('Direct query error:', error);
+      console.error('❌ SQL Error:', error);
       return new Response(JSON.stringify({ 
         success: false, 
         error: error.message 
@@ -160,5 +97,151 @@ async function handleDirectQuery(request: Request, dbService: D1Service, corsHea
     }
   }
 
-  return new Response('Method Not Allowed', { status: 405, headers: corsHeaders });
+  return new Response(JSON.stringify({ error: 'Method Not Allowed' }), {
+    status: 405,
+    headers: corsHeaders
+  });
+}
+
+// 📊 СТАТИСТИКА
+async function handleStats(request: Request, dbService: D1Service, corsHeaders: any): Promise<Response> {
+  if (request.method === 'GET') {
+    try {
+      // Простые COUNT запросы
+      const usersCount = await dbService.db.prepare('SELECT COUNT(*) as count FROM users').first() as any;
+      const dialogsCount = await dbService.db.prepare('SELECT COUNT(*) as count FROM dialogs').first() as any;
+      const assistantsCount = await dbService.db.prepare('SELECT COUNT(*) as count FROM assistants').first() as any;
+
+      return new Response(JSON.stringify({
+        users: usersCount?.count || 0,
+        dialogs: dialogsCount?.count || 0,
+        assistants: assistantsCount?.count || 0,
+        timestamp: new Date().toISOString()
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    } catch (error) {
+      return new Response(JSON.stringify({ 
+        error: 'Failed to get stats',
+        details: error.message 
+      }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+  }
+
+  return new Response(JSON.stringify({ error: 'Method Not Allowed' }), {
+    status: 405,
+    headers: corsHeaders
+  });
+}
+
+// 👥 ПОЛЬЗОВАТЕЛИ
+async function handleUsers(request: Request, dbService: D1Service, corsHeaders: any): Promise<Response> {
+  if (request.method === 'GET') {
+    try {
+      const result = await dbService.db.prepare('SELECT * FROM users ORDER BY created_at DESC LIMIT 100').all();
+      return new Response(JSON.stringify(result.results || []), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    } catch (error) {
+      return new Response(JSON.stringify({ 
+        error: 'Failed to get users',
+        details: error.message 
+      }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+  }
+
+  return new Response(JSON.stringify({ error: 'Method Not Allowed' }), {
+    status: 405,
+    headers: corsHeaders
+  });
+}
+
+// 💬 ДИАЛОГИ
+async function handleDialogs(request: Request, dbService: D1Service, corsHeaders: any): Promise<Response> {
+  if (request.method === 'GET') {
+    try {
+      const result = await dbService.db.prepare('SELECT * FROM dialogs ORDER BY timestamp DESC LIMIT 100').all();
+      return new Response(JSON.stringify(result.results || []), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    } catch (error) {
+      return new Response(JSON.stringify({ 
+        error: 'Failed to get dialogs',
+        details: error.message 
+      }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+  }
+
+  return new Response(JSON.stringify({ error: 'Method Not Allowed' }), {
+    status: 405,
+    headers: corsHeaders
+  });
+}
+
+// 🤖 АССИСТЕНТЫ
+async function handleAssistants(request: Request, dbService: D1Service, corsHeaders: any): Promise<Response> {
+  if (request.method === 'GET') {
+    try {
+      const result = await dbService.db.prepare('SELECT * FROM assistants ORDER BY created_at DESC').all();
+      return new Response(JSON.stringify(result.results || []), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    } catch (error) {
+      return new Response(JSON.stringify({ 
+        error: 'Failed to get assistants',
+        details: error.message 
+      }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+  }
+
+  if (request.method === 'POST') {
+    try {
+      const assistant = await request.json();
+      const id = `assistant_${Date.now()}`;
+      
+      await dbService.db.prepare(
+        `INSERT INTO assistants (id, name, type, system_prompt, tov_snippet, handoff_rules, is_active)
+         VALUES (?, ?, ?, ?, ?, ?, ?)`
+      ).bind(
+        id,
+        assistant.name,
+        assistant.type || 'ai',
+        assistant.system_prompt,
+        assistant.tov_snippet || null,
+        assistant.handoff_rules || null,
+        assistant.is_active ? 1 : 0
+      ).run();
+
+      const newAssistant = await dbService.db.prepare('SELECT * FROM assistants WHERE id = ?').bind(id).first();
+      
+      return new Response(JSON.stringify(newAssistant), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    } catch (error) {
+      return new Response(JSON.stringify({ 
+        error: 'Failed to create assistant',
+        details: error.message 
+      }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+  }
+
+  return new Response(JSON.stringify({ error: 'Method Not Allowed' }), {
+    status: 405,
+    headers: corsHeaders
+  });
 }
