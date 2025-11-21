@@ -1,57 +1,63 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Bellavka Admin - Fixed</title>
+    <title>Bellavka Admin - Debug</title>
     <style>
         body { font-family: Arial; margin: 20px; }
-        .section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; }
         button { padding: 10px; margin: 5px; cursor: pointer; }
         pre { background: #f5f5f5; padding: 10px; overflow: auto; }
         .success { color: green; }
         .error { color: red; }
+        .raw { background: #ffebee; padding: 10px; }
     </style>
 </head>
 <body>
-    <h1>🔧 Bellavka Admin - Fixed API</h1>
+    <h1>🐛 Bellavka Admin - Raw Debug</h1>
 
-    <div class="section">
-        <h3>1. Тест Endpoints</h3>
-        <button onclick="testEndpoint('stats')">/stats</button>
-        <button onclick="testEndpoint('users')">/users</button>
-        <button onclick="testEndpoint('dialogs')">/dialogs</button>
-        <button onclick="testEndpoint('assistants')">/assistants</button>
-        <button onclick="testQuery()">/query (SQL)</button>
-        <div id="test-result"></div>
+    <div>
+        <h3>Test Endpoints (with raw response):</h3>
+        <button onclick="testRaw('stats')">/stats</button>
+        <button onclick="testRaw('users')">/users</button>
+        <button onclick="testRaw('dialogs')">/dialogs</button>
+        <button onclick="testRaw('assistants')">/assistants</button>
+        <button onclick="testRawQuery()">/query (SQL)</button>
     </div>
 
-    <div class="section">
-        <h3>2. Результат:</h3>
-        <div id="result"></div>
-    </div>
+    <div id="result" style="margin-top: 20px;"></div>
 
     <script>
         const API_BASE = 'https://bellavka-ai-assistant-worker.ragon17886.workers.dev/api/admin';
 
-        async function testEndpoint(endpoint) {
-            showTest(`Testing ${endpoint}...`);
-            
+        async function testRaw(endpoint) {
             try {
                 const response = await fetch(`${API_BASE}/${endpoint}`);
-                const data = await response.json();
+                const rawText = await response.text();
                 
-                showTest(`✅ ${endpoint}: Status ${response.status}`, 'success');
-                showResult(data);
+                let parsedData;
+                try {
+                    parsedData = JSON.parse(rawText);
+                } catch {
+                    parsedData = { raw: rawText };
+                }
+
+                showResult({
+                    endpoint,
+                    status: response.status,
+                    raw: rawText,
+                    parsed: parsedData
+                });
             } catch (error) {
-                showTest(`❌ ${endpoint}: ${error.message}`, 'error');
+                showResult({
+                    endpoint,
+                    error: error.message
+                });
             }
         }
 
-        async function testQuery() {
+        async function testRawQuery() {
             const query = prompt('SQL:', 'SELECT name FROM sqlite_master WHERE type="table"');
             if (!query) return;
 
-            showTest(`Executing: ${query}`);
-            
             try {
                 const response = await fetch(`${API_BASE}/query`, {
                     method: 'POST',
@@ -59,32 +65,39 @@
                     body: JSON.stringify({ query })
                 });
                 
-                const data = await response.json();
+                const rawText = await response.text();
                 
-                if (data.success) {
-                    showTest('✅ Query executed', 'success');
-                    showResult(data.data);
-                } else {
-                    showTest(`❌ Query failed: ${data.error}`, 'error');
+                let parsedData;
+                try {
+                    parsedData = JSON.parse(rawText);
+                } catch {
+                    parsedData = { raw: rawText };
                 }
-            } catch (error) {
-                showTest(`❌ Request failed: ${error.message}`, 'error');
-            }
-        }
 
-        function showTest(message, type = '') {
-            const color = type === 'success' ? 'green' : type === 'error' ? 'red' : 'black';
-            document.getElementById('test-result').innerHTML += 
-                `<div style="color: ${color}">${message}</div>`;
+                showResult({
+                    endpoint: '/query',
+                    status: response.status,
+                    raw: rawText,
+                    parsed: parsedData
+                });
+            } catch (error) {
+                showResult({
+                    endpoint: '/query',
+                    error: error.message
+                });
+            }
         }
 
         function showResult(data) {
             document.getElementById('result').innerHTML = 
-                `<pre>${JSON.stringify(data, null, 2)}</pre>`;
+                `<h3>${data.endpoint} - Status: ${data.status || 'N/A'}</h3>
+                 ${data.error ? `<div class="error">Error: ${data.error}</div>` : ''}
+                 <div class="raw"><strong>Raw Response:</strong><br>${data.raw}</div>
+                 <pre><strong>Parsed:</strong><br>${JSON.stringify(data.parsed, null, 2)}</pre>`;
         }
 
-        // Авто-тест
-        testEndpoint('stats');
+        // Auto-test
+        testRaw('stats');
     </script>
 </body>
 </html>

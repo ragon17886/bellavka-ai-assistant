@@ -1,40 +1,63 @@
-/**
- * Cloudflare Worker for Bellavka AI Telegram Assistant
- */
-
-import { handleMessage } from './handlers/telegram';
-import { D1Service } from './db/D1Service';
 import { handleAdminRequest } from './api/admin';
+import { handleTelegramWebhook } from './handlers/telegram';
+import { D1Service } from './db/D1Service';
 
 export interface Env {
-  // D1 Database Binding
   DB: D1Database;
-  // Environment Variables
   TELEGRAM_BOT_TOKEN: string;
   GEMINI_API_KEY: string;
 }
 
 export default {
-	async fetch(
-		request: Request,
-		env: Env,
-		ctx: ExecutionContext
-	): Promise<Response> {
-		const url = new URL(request.url);
+  async fetch(
+    request: Request,
+    env: Env,
+    ctx: ExecutionContext
+  ): Promise<Response> {
+    const url = new URL(request.url);
+    
+    console.log('📨 Request:', url.pathname);
 
-                // Админ API
-                if (url.pathname.startsWith('/api/admin/')) {
-                    return handleAdminRequest(request, env, url.pathname);
-                }
+    // 🛠️ АДМИН API
+    if (url.pathname.startsWith('/api/admin/')) {
+      return handleAdminRequest(request, env, url.pathname);
+    }
 
-		// Обрабатываем вебхук как на корневом пути, так и на /webhook
-		if (url.pathname === '/webhook' || url.pathname === '/') {
-			const dbService = new D1Service(env);
-			return handleTelegramWebhook(request, env, ctx, dbService);
-		}
+    // 🎯 ПРЯМОЙ ENDPOINT ДЛЯ /users (временно)
+    if (url.pathname === '/api/admin/users') {
+      const corsHeaders = {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type',
+      };
 
-		return new Response('Bellavka AI Assistant Worker is running.', { status: 200 });
-	},
+      if (request.method === 'OPTIONS') {
+        return new Response(null, { headers: corsHeaders });
+      }
+
+      if (request.method === 'GET') {
+        try {
+          const result = await env.DB.prepare('SELECT * FROM users ORDER BY created_at DESC LIMIT 50').all();
+          return new Response(JSON.stringify(result.results || []), {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          });
+        } catch (error) {
+          return new Response(JSON.stringify({ error: error.message }), {
+            status: 500,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          });
+        }
+      }
+    }
+
+    // 🤖 TELEGRAM WEBHOOK
+    if (url.pathname === '/webhook' || url.pathname === '/') {
+      const dbService = new D1Service(env);
+      return handleTelegramWebhook(request, env, ctx, dbService);
+    }
+
+    return new Response('Bellavka AI Assistant Worker', { status: 200 });
+  },
 };
 
 async function handleTelegramWebhook(request: Request, env: Env, ctx: ExecutionContext, dbService: D1Service): Promise<Response> {
