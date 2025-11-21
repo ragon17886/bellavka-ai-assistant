@@ -1,29 +1,44 @@
-name: Deploy to GitHub Pages
+name: Deploy React Admin to GitHub Pages
 
 on:
   push:
     branches: [ main ]
-    paths: ['admin/**']
+    paths: 
+      - 'admin/**'
+      - '.github/workflows/deploy.yml'
 
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      
+      - name: Checkout
+        uses: actions/checkout@v4
+        
       - name: Setup Node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: admin/package-lock.json
           
-      - name: Install and build
+      - name: Install dependencies
         run: |
           cd admin
           npm install
+          
+      - name: Build project
+        run: |
+          cd admin
           npm run build
           
-      - name: Deploy
-        uses: peaceiris/actions-gh-pages@v3
+      - name: Setup Pages
+        uses: actions/configure-pages@v4
+        
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./docs
+          path: docs/
+          
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

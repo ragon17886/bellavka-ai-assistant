@@ -6,6 +6,15 @@ export default defineConfig({
   base: '/bellavka-ai-assistant/',
   build: {
     outDir: '../docs',
-    emptyOutDir: true
+    emptyOutDir: true,
+    rollupOptions: {
+      output: {
+        // Для лучшей совместимости с GitHub Pages
+        manualChunks: undefined,
+        entryFileNames: 'assets/[name].js',
+        chunkFileNames: 'assets/[name].js',
+        assetFileNames: 'assets/[name].[ext]'
+      }
+    }
   }
 })

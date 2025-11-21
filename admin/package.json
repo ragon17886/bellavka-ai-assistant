@@ -1,6 +1,7 @@
 {
   "name": "bellavka-admin",
-  "type": "module", 
+  "type": "module",
+  "version": "1.0.0",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
