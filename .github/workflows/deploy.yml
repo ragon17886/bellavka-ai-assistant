@@ -1,4 +1,4 @@
-name: Deploy Admin
+name: Deploy Static Admin
 
 on:
   push:
@@ -10,16 +10,77 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       
-      - name: Setup Node
-        uses: actions/setup-node@v2
-        with:
-          node-version: '16'
-          
-      - name: Build Admin
+      - name: Create basic admin
         run: |
-          cd admin
-          npm install
-          npm run build
+          mkdir -p docs
+          cat > docs/index.html << 'EOF'
+          <!DOCTYPE html>
+          <html>
+          <head>
+              <title>Bellavka Admin</title>
+              <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+              <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+              <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+              <style>
+                  body { font-family: Arial; margin: 40px; }
+                  .app { max-width: 800px; margin: 0 auto; }
+                  .nav { background: #2c3e50; padding: 15px; }
+                  .nav a { color: white; margin: 0 15px; text-decoration: none; }
+                  .content { padding: 20px; border: 1px solid #ddd; margin-top: 20px; }
+              </style>
+          </head>
+          <body>
+              <div id="root"></div>
+              
+              <script type="text/babel">
+                  const { useState, useEffect } = React;
+                  
+                  function App() {
+                    const [page, setPage] = useState('assistants');
+                    const [data, setData] = useState([]);
+                    
+                    useEffect(() => {
+                      fetchData();
+                    }, [page]);
+                    
+                    const fetchData = async () => {
+                      try {
+                        const url = page === 'assistants' 
+                          ? 'https://bellavka-ai-assistant-worker.ragon17886.workers.dev/api/admin/assistants'
+                          : 'https://bellavka-ai-assistant-worker.ragon17886.workers.dev/api/admin/dialogs';
+                          
+                        const response = await fetch(url);
+                        const result = await response.json();
+                        setData(result);
+                      } catch (error) {
+                        console.error('Error:', error);
+                        setData([{ error: error.message }]);
+                      }
+                    };
+                    
+                    return React.createElement('div', { className: 'app' },
+                      React.createElement('div', { className: 'nav' },
+                        React.createElement('button', { 
+                          onClick: () => setPage('assistants'),
+                          style: { background: page === 'assistants' ? '#3498db' : '#7f8c8d' }
+                        }, 'Ассистенты'),
+                        React.createElement('button', { 
+                          onClick: () => setPage('dialogs'),
+                          style: { background: page === 'dialogs' ? '#3498db' : '#7f8c8d' }
+                        }, 'Диалоги')
+                      ),
+                      React.createElement('div', { className: 'content' },
+                        React.createElement('h2', null, page === 'assistants' ? 'Ассистенты' : 'Диалоги'),
+                        React.createElement('pre', null, JSON.stringify(data, null, 2))
+                      )
+                    );
+                  }
+                  
+                  ReactDOM.render(React.createElement(App), document.getElementById('root'));
+              </script>
+          </body>
+          </html>
+          EOF
           
       - name: Deploy
         uses: peaceiris/actions-gh-pages@v3
