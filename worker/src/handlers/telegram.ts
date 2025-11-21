@@ -44,7 +44,7 @@ async function sendMessage(chatId: number, text: string, env: Env): Promise<void
 /**
  * Основной обработчик входящих сообщений Telegram.
  */
-export async function handleMessage(message: TelegramMessage, env: Env, dbService: D1Service): Promise<void> {
+export async function handleMessage(message: any, env: Env, dbService: D1Service): Promise<void> {
     const chatId = message.chat.id;
     const tgUser: TelegramUser = message.from;
     const text = message.text;

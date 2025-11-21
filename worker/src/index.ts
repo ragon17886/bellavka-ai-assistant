@@ -1,5 +1,5 @@
 import { handleAdminRequest } from './api/admin';
-import { handleTelegramWebhook } from './handlers/telegram';
+import { handleMessage } from './handlers/telegram'; // ← ДОБАВЬТЕ ЭТОТ ИМПОРТ
 import { D1Service } from './db/D1Service';
 
 export interface Env {
@@ -52,7 +52,7 @@ async function handleTelegramWebhook(request: Request, env: Env, ctx: ExecutionC
         // Проверка на наличие сообщения
         if (update.message) {
             console.log('Processing message from user:', update.message.from.id);
-            ctx.waitUntil(handleMessage(update.message, env, dbService));
+            ctx.waitUntil(handleMessage(update.message, env, dbService)); // ← ТУТ ИСПОЛЬЗУЕТСЯ handleMessage
         } else {
             console.log('No message in update');
         }
