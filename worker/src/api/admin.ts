@@ -37,6 +37,10 @@ const corsHeaders = {
       }
     }
 
+    if (pathname === '/api/admin/stats') {
+     return await handleStats(request, dbService, corsHeaders);
+    }
+
     return new Response('Not Found', { status: 404, headers: corsHeaders });
   } catch (error) {
     console.error('Admin API error:', error);
@@ -92,5 +96,24 @@ async function handleUserDialogs(request: Request, dbService: D1Service, tgId: n
     });
   }
 
+  return new Response('Method Not Allowed', { status: 405, headers: corsHeaders });
+}
+
+// Новый обработчик статистики
+async function handleStats(request: Request, dbService: D1Service, corsHeaders: any): Promise<Response> {
+  if (request.method === 'GET') {
+    try {
+      const stats = await dbService.getSimpleStats();
+      return new Response(JSON.stringify(stats), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    } catch (error) {
+      return new Response(JSON.stringify({ error: 'Failed to get stats' }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+  }
+  
   return new Response('Method Not Allowed', { status: 405, headers: corsHeaders });
 }

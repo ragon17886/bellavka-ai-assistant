@@ -1,89 +1,48 @@
-name: Deploy Static Admin
+name: Deploy React Admin
 
 on:
   push:
-    branches: [main]
+    branches: [ main ]
+    paths:
+      - 'admin/**'
+      - '.github/workflows/deploy.yml'
 
 jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+      
+    - name: Setup Node
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        
+    - name: Install and build
+      run: |
+        cd admin
+        npm ci
+        npm run build
+        
+    - name: Upload pages artifact
+      uses: actions/upload-pages-artifact@v3
+      with:
+        path: docs/
+
   deploy:
+    needs: build
+    permissions:
+      pages: write
+      id-token: write
+      
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+      
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
-      
-      - name: Create basic admin
-        run: |
-          mkdir -p docs
-          cat > docs/index.html << 'EOF'
-          <!DOCTYPE html>
-          <html>
-          <head>
-              <title>Bellavka Admin</title>
-              <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
-              <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
-              <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-              <style>
-                  body { font-family: Arial; margin: 40px; }
-                  .app { max-width: 800px; margin: 0 auto; }
-                  .nav { background: #2c3e50; padding: 15px; }
-                  .nav a { color: white; margin: 0 15px; text-decoration: none; }
-                  .content { padding: 20px; border: 1px solid #ddd; margin-top: 20px; }
-              </style>
-          </head>
-          <body>
-              <div id="root"></div>
-              
-              <script type="text/babel">
-                  const { useState, useEffect } = React;
-                  
-                  function App() {
-                    const [page, setPage] = useState('assistants');
-                    const [data, setData] = useState([]);
-                    
-                    useEffect(() => {
-                      fetchData();
-                    }, [page]);
-                    
-                    const fetchData = async () => {
-                      try {
-                        const url = page === 'assistants' 
-                          ? 'https://bellavka-ai-assistant-worker.ragon17886.workers.dev/api/admin/assistants'
-                          : 'https://bellavka-ai-assistant-worker.ragon17886.workers.dev/api/admin/dialogs';
-                          
-                        const response = await fetch(url);
-                        const result = await response.json();
-                        setData(result);
-                      } catch (error) {
-                        console.error('Error:', error);
-                        setData([{ error: error.message }]);
-                      }
-                    };
-                    
-                    return React.createElement('div', { className: 'app' },
-                      React.createElement('div', { className: 'nav' },
-                        React.createElement('button', { 
-                          onClick: () => setPage('assistants'),
-                          style: { background: page === 'assistants' ? '#3498db' : '#7f8c8d' }
-                        }, 'Ассистенты'),
-                        React.createElement('button', { 
-                          onClick: () => setPage('dialogs'),
-                          style: { background: page === 'dialogs' ? '#3498db' : '#7f8c8d' }
-                        }, 'Диалоги')
-                      ),
-                      React.createElement('div', { className: 'content' },
-                        React.createElement('h2', null, page === 'assistants' ? 'Ассистенты' : 'Диалоги'),
-                        React.createElement('pre', null, JSON.stringify(data, null, 2))
-                      )
-                    );
-                  }
-                  
-                  ReactDOM.render(React.createElement(App), document.getElementById('root'));
-              </script>
-          </body>
-          </html>
-          EOF
-          
-      - name: Deploy
-        uses: peaceiris/actions-gh-pages@v3
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./docs
+    - name: Deploy to GitHub Pages
+      id: deployment
+      uses: actions/deploy-pages@v4

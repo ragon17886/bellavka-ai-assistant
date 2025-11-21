@@ -390,4 +390,35 @@ export class D1Service {
             throw error;
         }
     }
+
+// Упрощенный метод для получения статистики
+async getSimpleStats(): Promise<any> {
+  if (!this.hasTables) {
+    return { users: 0, dialogs: 0, assistants: 0 };
+  }
+
+  try {
+    const usersResult = await this.db.prepare(
+      'SELECT COUNT(*) as count FROM users'
+    ).first<{ count: number }>();
+
+    const dialogsResult = await this.db.prepare(
+      'SELECT COUNT(*) as count FROM dialogs'
+    ).first<{ count: number }>();
+
+    const assistantsResult = await this.db.prepare(
+      'SELECT COUNT(*) as count FROM assistants'
+    ).first<{ count: number }>();
+
+    return {
+      users: usersResult?.count || 0,
+      dialogs: dialogsResult?.count || 0,
+      assistants: assistantsResult?.count || 0
+    };
+  } catch (error) {
+    console.error('Error getting stats:', error);
+    return { users: 0, dialogs: 0, assistants: 0 };
+  }
+}
+
 }

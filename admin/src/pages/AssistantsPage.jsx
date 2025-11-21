@@ -3,102 +3,75 @@ import { getAssistants, createAssistant } from '../utils/api';
 
 function AssistantsPage() {
   const [assistants, setAssistants] = useState([]);
-  const [showForm, setShowForm] = useState(false);
-  const [newAssistant, setNewAssistant] = useState({
-    name: '',
-    type: 'ai',
-    system_prompt: '',
-    tov_snippet: '',
-    handoff_rules: '',
-    is_active: true
-  });
+  const [stats, setStats] = useState({});
+  const [error, setError] = useState('');
 
   useEffect(() => {
-    loadAssistants();
+    loadData();
   }, []);
 
-  const loadAssistants = async () => {
-    const data = await getAssistants();
-    setAssistants(data);
+  const loadData = async () => {
+    try {
+      // Загружаем ассистентов
+      const assistantsResponse = await fetch('https://bellavka-ai-assistant-worker.ragon17886.workers.dev/api/admin/assistants');
+      const assistantsData = await assistantsResponse.json();
+      setAssistants(assistantsData);
+
+      // Загружаем статистику
+      const statsResponse = await fetch('https://bellavka-ai-assistant-worker.ragon17886.workers.dev/api/admin/stats');
+      const statsData = await statsResponse.json();
+      setStats(statsData);
+
+    } catch (err) {
+      setError('Ошибка загрузки: ' + err.message);
+      console.error('API Error:', err);
+    }
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    await createAssistant(newAssistant);
-    setShowForm(false);
-    setNewAssistant({
-      name: '',
-      type: 'ai',
-      system_prompt: '',
-      tov_snippet: '',
-      handoff_rules: '',
-      is_active: true
-    });
-    loadAssistants();
+  const testCreateAssistant = async () => {
+    try {
+      const response = await fetch('https://bellavka-ai-assistant-worker.ragon17886.workers.dev/api/admin/assistants', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name: 'Тестовый ассистент',
+          type: 'ai',
+          system_prompt: 'Ты тестовый ассистент',
+          is_active: true
+        })
+      });
+      
+      const result = await response.json();
+      console.log('Create result:', result);
+      loadData(); // Перезагружаем данные
+      
+    } catch (err) {
+      setError('Ошибка создания: ' + err.message);
+    }
   };
 
   return (
     <div>
-      <div className="page-header">
-        <h2>Ассистенты</h2>
-        <button onClick={() => setShowForm(true)}>Добавить ассистента</button>
+      <h2>Ассистенты - Отладка</h2>
+      
+      {error && <div style={{color: 'red'}}>{error}</div>}
+      
+      <div style={{background: '#f0f0f0', padding: '15px', margin: '10px 0'}}>
+        <h3>Статистика БД:</h3>
+        <p>Пользователи: {stats.users || 0}</p>
+        <p>Диалоги: {stats.dialogs || 0}</p>
+        <p>Ассистенты: {stats.assistants || 0}</p>
+        <button onClick={loadData}>Обновить статистику</button>
       </div>
 
-      {showForm && (
-        <form onSubmit={handleSubmit} className="assistant-form">
-          <input
-            type="text"
-            placeholder="Название"
-            value={newAssistant.name}
-            onChange={(e) => setNewAssistant({...newAssistant, name: e.target.value})}
-            required
-          />
-          <select
-            value={newAssistant.type}
-            onChange={(e) => setNewAssistant({...newAssistant, type: e.target.value})}
-          >
-            <option value="ai">AI</option>
-            <option value="function">Function</option>
-          </select>
-          <textarea
-            placeholder="Системный промпт"
-            value={newAssistant.system_prompt}
-            onChange={(e) => setNewAssistant({...newAssistant, system_prompt: e.target.value})}
-            required
-            rows="6"
-          />
-          <textarea
-            placeholder="TOV сниппет"
-            value={newAssistant.tov_snippet}
-            onChange={(e) => setNewAssistant({...newAssistant, tov_snippet: e.target.value})}
-            rows="3"
-          />
-          <textarea
-            placeholder="Правила передачи"
-            value={newAssistant.handoff_rules}
-            onChange={(e) => setNewAssistant({...newAssistant, handoff_rules: e.target.value})}
-            rows="3"
-          />
-          <div>
-            <button type="submit">Создать</button>
-            <button type="button" onClick={() => setShowForm(false)}>Отмена</button>
-          </div>
-        </form>
-      )}
+      <button onClick={testCreateAssistant} style={{background: '#4CAF50', color: 'white', padding: '10px'}}>
+        Создать тестового ассистента
+      </button>
 
-      <div className="assistants-grid">
-        {assistants.map(assistant => (
-          <div key={assistant.id} className="assistant-card">
-            <h3>{assistant.name}</h3>
-            <p><strong>Тип:</strong> {assistant.type}</p>
-            <p><strong>Статус:</strong> {assistant.is_active ? 'Активен' : 'Неактивен'}</p>
-            <div className="prompt-preview">
-              {assistant.system_prompt.substring(0, 100)}...
-            </div>
-            <p><small>Создан: {new Date(assistant.created_at).toLocaleDateString()}</small></p>
-          </div>
-        ))}
-      </div>
+      <h3>Список ассистентов ({assistants.length}):</h3>
+      <pre>{JSON.stringify(assistants, null, 2)}</pre>
     </div>
   );
 }
