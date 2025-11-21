@@ -3,7 +3,7 @@ import react from '@vitejs/plugin-react'
 
 export default defineConfig({
   plugins: [react()],
-  base: '/bellavka-ai-assistant/', // важно для GitHub Pages
+  base: '/bellavka-ai-assistant/',
   build: {
     outDir: '../docs',
     emptyOutDir: true
