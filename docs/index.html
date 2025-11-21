@@ -1,26 +1,25 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Bellavka Admin - Debug</title>
+    <title>Bellavka Admin - Final Fix</title>
     <style>
         body { font-family: Arial; margin: 20px; }
-        button { padding: 10px; margin: 5px; cursor: pointer; }
-        pre { background: #f5f5f5; padding: 10px; overflow: auto; }
-        .success { color: green; }
-        .error { color: red; }
-        .raw { background: #ffebee; padding: 10px; }
+        button { padding: 10px; margin: 5px; cursor: pointer; background: #007cba; color: white; border: none; border-radius: 4px; }
+        pre { background: #f5f5f5; padding: 10px; border-radius: 4px; }
+        .success { background: #d4edda; padding: 10px; border-radius: 4px; }
+        .error { background: #f8d7da; padding: 10px; border-radius: 4px; }
     </style>
 </head>
 <body>
-    <h1>🐛 Bellavka Admin - Raw Debug</h1>
+    <h1>✅ Bellavka Admin - All Endpoints Test</h1>
 
     <div>
-        <h3>Test Endpoints (with raw response):</h3>
-        <button onclick="testRaw('stats')">/stats</button>
-        <button onclick="testRaw('users')">/users</button>
-        <button onclick="testRaw('dialogs')">/dialogs</button>
-        <button onclick="testRaw('assistants')">/assistants</button>
-        <button onclick="testRawQuery()">/query (SQL)</button>
+        <button onclick="testEndpoint('stats')">📊 /stats</button>
+        <button onclick="testEndpoint('users')">👥 /users</button>
+        <button onclick="testEndpoint('dialogs')">💬 /dialogs</button>
+        <button onclick="testEndpoint('assistants')">🤖 /assistants</button>
+        <button onclick="testQuery()">🔧 /query (SQL)</button>
+        <button onclick="createAssistant()">➕ Create Assistant</button>
     </div>
 
     <div id="result" style="margin-top: 20px;"></div>
@@ -28,36 +27,30 @@
     <script>
         const API_BASE = 'https://bellavka-ai-assistant-worker.ragon17886.workers.dev/api/admin';
 
-        async function testRaw(endpoint) {
+        async function testEndpoint(endpoint) {
+            showResult(`Testing ${endpoint}...`);
+            
             try {
                 const response = await fetch(`${API_BASE}/${endpoint}`);
-                const rawText = await response.text();
+                const data = await response.json();
                 
-                let parsedData;
-                try {
-                    parsedData = JSON.parse(rawText);
-                } catch {
-                    parsedData = { raw: rawText };
+                if (response.status === 200) {
+                    showResult(`✅ ${endpoint}: ${JSON.stringify(data).length} bytes`, 'success');
+                    showResult(`<pre>${JSON.stringify(data, null, 2)}</pre>`);
+                } else {
+                    showResult(`❌ ${endpoint}: ${data.error}`, 'error');
                 }
-
-                showResult({
-                    endpoint,
-                    status: response.status,
-                    raw: rawText,
-                    parsed: parsedData
-                });
             } catch (error) {
-                showResult({
-                    endpoint,
-                    error: error.message
-                });
+                showResult(`❌ ${endpoint}: ${error.message}`, 'error');
             }
         }
 
-        async function testRawQuery() {
-            const query = prompt('SQL:', 'SELECT name FROM sqlite_master WHERE type="table"');
+        async function testQuery() {
+            const query = prompt('Enter SQL query:', 'SELECT name FROM sqlite_master WHERE type="table"');
             if (!query) return;
 
+            showResult(`Executing: ${query}`);
+            
             try {
                 const response = await fetch(`${API_BASE}/query`, {
                     method: 'POST',
@@ -65,39 +58,50 @@
                     body: JSON.stringify({ query })
                 });
                 
-                const rawText = await response.text();
+                const data = await response.json();
                 
-                let parsedData;
-                try {
-                    parsedData = JSON.parse(rawText);
-                } catch {
-                    parsedData = { raw: rawText };
+                if (data.success) {
+                    showResult(`✅ Query: ${data.data.length} results`, 'success');
+                    showResult(`<pre>${JSON.stringify(data.data, null, 2)}</pre>`);
+                } else {
+                    showResult(`❌ Query failed: ${data.error}`, 'error');
                 }
-
-                showResult({
-                    endpoint: '/query',
-                    status: response.status,
-                    raw: rawText,
-                    parsed: parsedData
-                });
             } catch (error) {
-                showResult({
-                    endpoint: '/query',
-                    error: error.message
-                });
+                showResult(`❌ Request failed: ${error.message}`, 'error');
             }
         }
 
-        function showResult(data) {
-            document.getElementById('result').innerHTML = 
-                `<h3>${data.endpoint} - Status: ${data.status || 'N/A'}</h3>
-                 ${data.error ? `<div class="error">Error: ${data.error}</div>` : ''}
-                 <div class="raw"><strong>Raw Response:</strong><br>${data.raw}</div>
-                 <pre><strong>Parsed:</strong><br>${JSON.stringify(data.parsed, null, 2)}</pre>`;
+        async function createAssistant() {
+            try {
+                const response = await fetch(`${API_BASE}/assistants`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        name: 'Test Assistant ' + new Date().toLocaleTimeString(),
+                        type: 'ai',
+                        system_prompt: 'You are a helpful assistant',
+                        is_active: true
+                    })
+                });
+                
+                const data = await response.json();
+                showResult(`✅ Assistant created`, 'success');
+                showResult(`<pre>${JSON.stringify(data, null, 2)}</pre>`);
+            } catch (error) {
+                showResult(`❌ Create failed: ${error.message}`, 'error');
+            }
+        }
+
+        function showResult(message, type = '') {
+            const div = document.createElement('div');
+            if (type === 'success') div.className = 'success';
+            if (type === 'error') div.className = 'error';
+            div.innerHTML = message;
+            document.getElementById('result').appendChild(div);
         }
 
         // Auto-test
-        testRaw('stats');
+        testEndpoint('stats');
     </script>
 </body>
 </html>

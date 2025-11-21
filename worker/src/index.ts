@@ -16,38 +16,11 @@ export default {
   ): Promise<Response> {
     const url = new URL(request.url);
     
-    console.log('📨 Request:', url.pathname);
+    console.log('📍 Request to:', url.pathname);
 
-    // 🛠️ АДМИН API
+    // 🛠️ ADMIN API
     if (url.pathname.startsWith('/api/admin/')) {
       return handleAdminRequest(request, env, url.pathname);
-    }
-
-    // 🎯 ПРЯМОЙ ENDPOINT ДЛЯ /users (временно)
-    if (url.pathname === '/api/admin/users') {
-      const corsHeaders = {
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type',
-      };
-
-      if (request.method === 'OPTIONS') {
-        return new Response(null, { headers: corsHeaders });
-      }
-
-      if (request.method === 'GET') {
-        try {
-          const result = await env.DB.prepare('SELECT * FROM users ORDER BY created_at DESC LIMIT 50').all();
-          return new Response(JSON.stringify(result.results || []), {
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-          });
-        } catch (error) {
-          return new Response(JSON.stringify({ error: error.message }), {
-            status: 500,
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-          });
-        }
-      }
     }
 
     // 🤖 TELEGRAM WEBHOOK
@@ -56,7 +29,11 @@ export default {
       return handleTelegramWebhook(request, env, ctx, dbService);
     }
 
-    return new Response('Bellavka AI Assistant Worker', { status: 200 });
+    // ℹ️ DEFAULT
+    return new Response('🚀 Bellavka AI Assistant Worker\n\nEndpoints:\n- GET /api/admin/stats\n- GET /api/admin/users\n- GET /api/admin/dialogs\n- GET/POST /api/admin/assistants\n- POST /api/admin/query', { 
+      status: 200,
+      headers: { 'Content-Type': 'text/plain' }
+    });
   },
 };
 
