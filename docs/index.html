@@ -1,99 +1,14 @@
 <!DOCTYPE html>
-<html lang="ru">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Bellavka Admin</title>
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { 
-            font-family: -apple-system, BlinkMacSystemFont, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        .container {
-            background: white;
-            padding: 40px;
-            border-radius: 12px;
-            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
-            text-align: center;
-            max-width: 500px;
-        }
-        h1 { color: #2c3e50; margin-bottom: 20px; }
-        .status { 
-            background: #e8f5e8; 
-            padding: 20px; 
-            border-radius: 8px;
-            margin: 20px 0;
-            border-left: 4px solid #4CAF50;
-        }
-        .btn {
-            padding: 12px 24px;
-            background: #3498db;
-            color: white;
-            text-decoration: none;
-            border-radius: 6px;
-            margin: 5px;
-            display: inline-block;
-        }
-        .btn:hover { background: #2980b9; }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <h1>🚀 Bellavka Admin</h1>
-        <div class="status">
-            <h3>✅ GitHub Pages работает!</h3>
-            <p>Админка успешно загружена</p>
-        </div>
-        
-        <div>
-            <a href="#" class="btn" onclick="loadAssistants()">Ассистенты</a>
-            <a href="#" class="btn" onclick="loadDialogs()">Диалоги</a>
-        </div>
-
-        <div id="content" style="margin-top: 20px; text-align: left;"></div>
-    </div>
-
-    <script>
-        async function loadAssistants() {
-            try {
-                const response = await fetch('https://bellavka-ai-assistant-worker.ragon17886.workers.dev/api/admin/assistants');
-                const assistants = await response.json();
-                document.getElementById('content').innerHTML = `
-                    <h3>Ассистенты (${assistants.length})</h3>
-                    <pre>${JSON.stringify(assistants, null, 2)}</pre>
-                `;
-            } catch (error) {
-                document.getElementById('content').innerHTML = `
-                    <div style="color: red;">Ошибка API: ${error.message}</div>
-                `;
-            }
-        }
-
-        async function loadDialogs() {
-            try {
-                const response = await fetch('https://bellavka-ai-assistant-worker.ragon17886.workers.dev/api/admin/dialogs');
-                const dialogs = await response.json();
-                document.getElementById('content').innerHTML = `
-                    <h3>Диалоги (${dialogs.length})</h3>
-                    <pre>${JSON.stringify(dialogs.slice(0, 5), null, 2)}</pre>
-                `;
-            } catch (error) {
-                document.getElementById('content').innerHTML = `
-                    <div style="color: red;">Ошибка API: ${error.message}</div>
-                `;
-            }
-        }
-
-        // Проверка API при загрузке
-        fetch('https://bellavka-ai-assistant-worker.ragon17886.workers.dev/api/admin/assistants')
-            .then(r => r.json())
-            .then(data => console.log('API доступен:', data.length + ' ассистентов'))
-            .catch(err => console.log('API ошибка:', err));
-    </script>
-</body>
+    <script type="module" crossorigin src="/bellavka-ai-assistant/assets/index.js"></script>
+    <link rel="stylesheet" href="/bellavka-ai-assistant/assets/index.css">
+  </head>
+  <body>
+    <div id="root"></div>
+    
+  </body>
 </html>
