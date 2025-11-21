@@ -1,25 +1,23 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Bellavka Admin - Final Fix</title>
+    <title>Bellavka Admin - Debug Direct</title>
     <style>
         body { font-family: Arial; margin: 20px; }
-        button { padding: 10px; margin: 5px; cursor: pointer; background: #007cba; color: white; border: none; border-radius: 4px; }
-        pre { background: #f5f5f5; padding: 10px; border-radius: 4px; }
-        .success { background: #d4edda; padding: 10px; border-radius: 4px; }
-        .error { background: #f8d7da; padding: 10px; border-radius: 4px; }
+        button { padding: 10px; margin: 5px; cursor: pointer; }
+        pre { background: #f5f5f5; padding: 10px; }
+        .success { color: green; }
+        .error { color: red; }
     </style>
 </head>
 <body>
-    <h1>✅ Bellavka Admin - All Endpoints Test</h1>
+    <h1>🎯 Direct Endpoints Test</h1>
 
     <div>
-        <button onclick="testEndpoint('stats')">📊 /stats</button>
-        <button onclick="testEndpoint('users')">👥 /users</button>
-        <button onclick="testEndpoint('dialogs')">💬 /dialogs</button>
-        <button onclick="testEndpoint('assistants')">🤖 /assistants</button>
-        <button onclick="testQuery()">🔧 /query (SQL)</button>
-        <button onclick="createAssistant()">➕ Create Assistant</button>
+        <button onclick="testDirect('users')">👥 Direct /users</button>
+        <button onclick="testDirect('dialogs')">💬 Direct /dialogs</button>
+        <button onclick="testDirectQuery()">🔧 Direct /query</button>
+        <button onclick="checkLogs()">📋 Check Console Logs</button>
     </div>
 
     <div id="result" style="margin-top: 20px;"></div>
@@ -27,28 +25,23 @@
     <script>
         const API_BASE = 'https://bellavka-ai-assistant-worker.ragon17886.workers.dev/api/admin';
 
-        async function testEndpoint(endpoint) {
-            showResult(`Testing ${endpoint}...`);
+        async function testDirect(endpoint) {
+            showResult(`Testing DIRECT ${endpoint}...`);
             
             try {
                 const response = await fetch(`${API_BASE}/${endpoint}`);
                 const data = await response.json();
                 
-                if (response.status === 200) {
-                    showResult(`✅ ${endpoint}: ${JSON.stringify(data).length} bytes`, 'success');
-                    showResult(`<pre>${JSON.stringify(data, null, 2)}</pre>`);
-                } else {
-                    showResult(`❌ ${endpoint}: ${data.error}`, 'error');
-                }
+                showResult(`✅ ${endpoint}: ${data.source}`, 'success');
+                showResult(`<pre>${JSON.stringify(data, null, 2)}</pre>`);
             } catch (error) {
                 showResult(`❌ ${endpoint}: ${error.message}`, 'error');
             }
         }
 
-        async function testQuery() {
-            const query = prompt('Enter SQL query:', 'SELECT name FROM sqlite_master WHERE type="table"');
-            if (!query) return;
-
+        async function testDirectQuery() {
+            const query = 'SELECT name FROM sqlite_master WHERE type="table"';
+            
             showResult(`Executing: ${query}`);
             
             try {
@@ -61,7 +54,7 @@
                 const data = await response.json();
                 
                 if (data.success) {
-                    showResult(`✅ Query: ${data.data.length} results`, 'success');
+                    showResult(`✅ Query: ${data.source}`, 'success');
                     showResult(`<pre>${JSON.stringify(data.data, null, 2)}</pre>`);
                 } else {
                     showResult(`❌ Query failed: ${data.error}`, 'error');
@@ -71,37 +64,25 @@
             }
         }
 
-        async function createAssistant() {
+        async function checkLogs() {
+            // Попробуем получить логи через API
             try {
-                const response = await fetch(`${API_BASE}/assistants`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        name: 'Test Assistant ' + new Date().toLocaleTimeString(),
-                        type: 'ai',
-                        system_prompt: 'You are a helpful assistant',
-                        is_active: true
-                    })
-                });
-                
-                const data = await response.json();
-                showResult(`✅ Assistant created`, 'success');
-                showResult(`<pre>${JSON.stringify(data, null, 2)}</pre>`);
+                const response = await fetch(`${API_BASE}/stats`);
+                showResult('📋 Stats endpoint works - check Cloudflare logs for details');
             } catch (error) {
-                showResult(`❌ Create failed: ${error.message}`, 'error');
+                showResult(`❌ Cannot check logs: ${error.message}`);
             }
         }
 
         function showResult(message, type = '') {
             const div = document.createElement('div');
-            if (type === 'success') div.className = 'success';
-            if (type === 'error') div.className = 'error';
+            if (type === 'success') div.style.color = 'green';
+            if (type === 'error') div.style.color = 'red';
             div.innerHTML = message;
             document.getElementById('result').appendChild(div);
         }
 
-        // Auto-test
-        testEndpoint('stats');
+        testDirect('users');
     </script>
 </body>
 </html>
