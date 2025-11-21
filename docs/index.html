@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Bellavka Admin - Direct D1</title>
+    <title>Bellavka Admin - Database Debug</title>
     <style>
         body { font-family: Arial; margin: 20px; background: #f5f5f5; }
         .container { max-width: 1200px; margin: 0 auto; background: white; padding: 20px; border-radius: 8px; }
@@ -13,12 +13,22 @@
         pre { background: #2c3e50; color: white; padding: 15px; border-radius: 4px; overflow: auto; }
         .success { color: #28a745; }
         .error { color: #dc3545; }
+        .debug { background: #fff3cd; padding: 10px; border-radius: 4px; }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>🏪 Bellavka Admin - Database Manager</h1>
+        <h1>🐛 Bellavka Admin - Debug Mode</h1>
         
+        <div class="section debug">
+            <h3>🔍 Проверка API Endpoints</h3>
+            <button onclick="testEndpoint('/api/admin/assistants')">Test /assistants</button>
+            <button onclick="testEndpoint('/api/admin/dialogs')">Test /dialogs</button>
+            <button onclick="testEndpoint('/api/admin/stats')">Test /stats</button>
+            <button onclick="testEndpoint('/api/admin/direct-query')">Test /direct-query</button>
+            <div id="endpoint-test"></div>
+        </div>
+
         <div class="nav">
             <button onclick="loadTable('users')">👥 Пользователи</button>
             <button onclick="loadTable('dialogs')">💬 Диалоги</button>
@@ -32,17 +42,38 @@
                 <p>Выберите таблицу для просмотра данных</p>
             </div>
         </div>
-
-        <div class="section">
-            <h3>⚡ Быстрые действия:</h3>
-            <button onclick="createTestData()">➕ Создать тестовые данные</button>
-            <button onclick="checkTables()">🔍 Проверить таблицы</button>
-            <button onclick="clearAllData()">🗑️ Очистить все данные</button>
-        </div>
     </div>
 
     <script>
         const WORKER_URL = 'https://bellavka-ai-assistant-worker.ragon17886.workers.dev';
+
+        // Функция для тестирования endpoints
+        async function testEndpoint(endpoint) {
+            try {
+                const response = await fetch(WORKER_URL + endpoint);
+                const text = await response.text();
+                
+                let data;
+                try {
+                    data = JSON.parse(text);
+                } catch {
+                    data = { raw: text };
+                }
+                
+                document.getElementById('endpoint-test').innerHTML = `
+                    <div class="data-section">
+                        <strong>${endpoint}:</strong> Status ${response.status}
+                        <pre>${JSON.stringify(data, null, 2)}</pre>
+                    </div>
+                `;
+            } catch (error) {
+                document.getElementById('endpoint-test').innerHTML = `
+                    <div class="error">
+                        <strong>${endpoint} ERROR:</strong> ${error.message}
+                    </div>
+                `;
+            }
+        }
 
         async function loadTable(tableName) {
             try {
@@ -54,11 +85,19 @@
                         'Content-Type': 'application/json',
                     },
                     body: JSON.stringify({
-                        query: `SELECT * FROM ${tableName} ORDER BY id DESC LIMIT 50`
+                        query: `SELECT * FROM ${tableName} LIMIT 20`
                     })
                 });
                 
-                const result = await response.json();
+                const text = await response.text();
+                let result;
+                
+                try {
+                    result = JSON.parse(text);
+                } catch (e) {
+                    showError(`Невалидный JSON: ${text}`);
+                    return;
+                }
                 
                 if (result.success && result.data) {
                     showData(tableName, result.data);
@@ -86,74 +125,18 @@
                     body: JSON.stringify({ query })
                 });
                 
-                const result = await response.json();
+                const text = await response.text();
+                let result;
+                
+                try {
+                    result = JSON.parse(text);
+                } catch (e) {
+                    showError(`Невалидный JSON: ${text}`);
+                    return;
+                }
                 
                 if (result.success) {
                     showData('Результат запроса', result.data);
-                } else {
-                    showError(`Ошибка: ${result.error}`);
-                }
-                
-            } catch (error) {
-                showError(`Ошибка: ${error.message}`);
-            }
-        }
-
-        async function createTestData() {
-            try {
-                showLoading('Создание тестовых данных...');
-                
-                // Создаем тестового пользователя
-                await fetch(`${WORKER_URL}/api/admin/direct-query`, {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({
-                        query: `INSERT INTO users (tg_id, full_name, last_activity) VALUES (123456, 'Тестовый Пользователь', CURRENT_TIMESTAMP)`
-                    })
-                });
-                
-                // Создаем тестовый диалог
-                await fetch(`${WORKER_URL}/api/admin/direct-query`, {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({
-                        query: `INSERT INTO dialogs (session_id, tg_id, role, content) VALUES ('test_123456_${Date.now()}', 123456, 'user', 'Тестовое сообщение')`
-                    })
-                });
-                
-                // Создаем тестового ассистента
-                await fetch(`${WORKER_URL}/api/admin/direct-query`, {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({
-                        query: `INSERT INTO assistants (id, name, type, system_prompt, is_active) VALUES ('test_${Date.now()}', 'Тестовый Ассистент', 'ai', 'Ты тестовый ассистент', 1)`
-                    })
-                });
-                
-                showSuccess('Тестовые данные созданы!');
-                loadTable('users');
-                
-            } catch (error) {
-                showError(`Ошибка создания: ${error.message}`);
-            }
-        }
-
-        async function checkTables() {
-            try {
-                showLoading('Проверка таблиц...');
-                
-                const response = await fetch(`${WORKER_URL}/api/admin/direct-query`, {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({
-                        query: `SELECT name FROM sqlite_master WHERE type='table'`
-                    })
-                });
-                
-                const result = await response.json();
-                
-                if (result.success) {
-                    showData('Таблицы в базе', result.data);
                 } else {
                     showError(`Ошибка: ${result.error}`);
                 }
@@ -177,16 +160,12 @@
             `;
         }
 
-        function showSuccess(message) {
-            document.getElementById('data-result').innerHTML = `<div class="success">✅ ${message}</div>`;
-        }
-
         function showError(message) {
             document.getElementById('data-result').innerHTML = `<div class="error">❌ ${message}</div>`;
         }
 
-        // Автозагрузка таблиц при старте
-        checkTables();
+        // Авто-тест endpoints при загрузке
+        testEndpoint('/api/admin/assistants');
     </script>
 </body>
 </html>
