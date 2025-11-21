@@ -48,13 +48,13 @@ export class D1Service {
 
             const result = await this.db.prepare(
                 'SELECT * FROM users WHERE tg_id = ?'
-            ).bind(tg_id).first();
+            ).bind(tg_id).first<User>();
 
             if (result) {
                 await this.db.prepare(
                     'UPDATE users SET last_activity = CURRENT_TIMESTAMP WHERE tg_id = ?'
                 ).bind(tg_id).run();
-                return result as User;
+                return result;
             }
 
             await this.db.prepare(
@@ -64,13 +64,13 @@ export class D1Service {
 
             const newUser = await this.db.prepare(
                 'SELECT * FROM users WHERE tg_id = ?'
-            ).bind(tg_id).first();
+            ).bind(tg_id).first<User>();
 
             if (!newUser) {
                 throw new Error('Failed to retrieve newly created user.');
             }
 
-            return newUser as User;
+            return newUser;
 
         } catch (error) {
             console.error('Error in getOrCreateUser:', error);
@@ -123,9 +123,9 @@ export class D1Service {
                  WHERE tg_id = ? 
                  ORDER BY id DESC 
                  LIMIT ?`
-            ).bind(tg_id, limit).all();
+            ).bind(tg_id, limit).all<Dialog>();
 
-            return result.results ? result.results.reverse() as Dialog[] : [];
+            return result.results ? result.results.reverse() : [];
         } catch (error) {
             console.error('Error in getDialogHistory:', error);
             return [];
