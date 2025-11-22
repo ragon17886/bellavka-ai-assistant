@@ -1,0 +1,6 @@
+{
+  "name": "bellavka-admin-mini",
+  "scripts": {
+    "build": "cp index.html ../docs/index.html"
+  }
+}

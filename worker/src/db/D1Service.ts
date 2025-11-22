@@ -1,138 +1,85 @@
-import { D1Service } from '../db/D1Service';
 import { Env } from '../index';
+import { User, Dialog, TelegramUser } from './types';
 
-export async function handleAdminRequest(request: Request, env: Env, pathname: string): Promise<Response> {
-  const dbService = new D1Service(env);
-  
-  const corsHeaders = {
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type',
-  };
+export class D1Service {
+  private db: D1Database;
 
-  if (request.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+  constructor(env: Env) {
+    this.db = env.DB;
   }
 
-  try {
-    // Существующие endpoints
-    if (pathname === '/api/admin/assistants') {
-      return await handleAssistants(request, dbService, corsHeaders);
-    }
-    
-    if (pathname === '/api/admin/dialogs') {
-      return await handleDialogs(request, dbService, corsHeaders);
-    }
-    
-    if (pathname === '/api/admin/stats') {
-      return await handleStats(request, dbService, corsHeaders);
-    }
-    
-    // НОВЫЙ endpoint для прямых SQL запросов
-    if (pathname === '/api/admin/direct-query') {
-      return await handleDirectQuery(request, dbService, corsHeaders);
-    }
-
-    return new Response('Not Found', { status: 404, headers: corsHeaders });
-  } catch (error) {
-    console.error('Admin API error:', error);
-    return new Response(JSON.stringify({ error: 'Internal Server Error' }), {
-      status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-    });
-  }
-}
-
-// НОВЫЙ обработчик для прямых SQL запросов
-async function handleDirectQuery(request: Request, dbService: D1Service, corsHeaders: any): Promise<Response> {
-  if (request.method === 'POST') {
+  async getOrCreateUser(tgUser: TelegramUser): Promise<User> {
     try {
-      const { query } = await request.json();
-      
-      if (!query) {
-        return new Response(JSON.stringify({ success: false, error: 'Query is required' }), {
-          status: 400,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        });
+      const { id: tg_id, first_name, last_name } = tgUser;
+      const fullName = last_name ? `${first_name} ${last_name}` : first_name;
+
+      // Поиск пользователя
+      const existingUser = await this.db.prepare(
+        'SELECT * FROM users WHERE tg_id = ?'
+      ).bind(tg_id).first();
+
+      if (existingUser) {
+        // Обновление активности
+        await this.db.prepare(
+          'UPDATE users SET last_activity = CURRENT_TIMESTAMP WHERE tg_id = ?'
+        ).bind(tg_id).run();
+        return existingUser as User;
       }
 
-      console.log('Executing direct query:', query);
-      
-      // Выполняем запрос напрямую через D1
-      const result = await dbService.db.prepare(query).all();
-      
-      return new Response(JSON.stringify({ 
-        success: true, 
-        data: result.results || [],
-        meta: result.meta
-      }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      });
-      
-    } catch (error: any) {
-      console.error('Direct query error:', error);
-      return new Response(JSON.stringify({ 
-        success: false, 
-        error: error.message 
-      }), {
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      });
-    }
-  }
+      // Создание нового пользователя
+      await this.db.prepare(
+        `INSERT INTO users (tg_id, full_name, last_activity, created_at) 
+         VALUES (?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`
+      ).bind(tg_id, fullName).run();
 
-  return new Response('Method Not Allowed', { status: 405, headers: corsHeaders });
-}
+      const newUser = await this.db.prepare(
+        'SELECT * FROM users WHERE tg_id = ?'
+      ).bind(tg_id).first();
 
-// Существующие обработчики (должны быть уже в файле)
-async function handleAssistants(request: Request, dbService: D1Service, corsHeaders: any): Promise<Response> {
-  if (request.method === 'GET') {
-    const assistants = await dbService.getAssistants();
-    return new Response(JSON.stringify(assistants), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-    });
-  }
-  
-  if (request.method === 'POST') {
-    try {
-      const assistant = await request.json();
-      const result = await dbService.createAssistant(assistant);
-      return new Response(JSON.stringify(result), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      });
+      return newUser as User;
+
     } catch (error) {
-      return new Response(JSON.stringify({ error: 'Failed to create assistant' }), {
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      });
+      console.error('Error in getOrCreateUser:', error);
+      // Fallback
+      return {
+        tg_id: tgUser.id,
+        full_name: tgUser.first_name + (tgUser.last_name ? ' ' + tgUser.last_name : ''),
+        fio: null,
+        phone: null,
+        city: null,
+        adress: null,
+        is_blocked: 0,
+        last_activity: new Date().toISOString(),
+        created_at: new Date().toISOString()
+      };
     }
   }
 
-  return new Response('Method Not Allowed', { status: 405, headers: corsHeaders });
-}
-
-async function handleDialogs(request: Request, dbService: D1Service, corsHeaders: any): Promise<Response> {
-  if (request.method === 'GET') {
-    const { searchParams } = new URL(request.url);
-    const page = parseInt(searchParams.get('page') || '1');
-    const limit = parseInt(searchParams.get('limit') || '50');
-    
-    const dialogs = await dbService.getDialogsWithUsers(page, limit);
-    return new Response(JSON.stringify(dialogs), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-    });
+  async logDialog(tg_id: number, role: 'user' | 'assistant' | 'system', content: string, metadata: string | null = null): Promise<void> {
+    try {
+      const session_id = `tg_${tg_id}_${Date.now()}`;
+      await this.db.prepare(
+        `INSERT INTO dialogs (session_id, tg_id, role, content, metadata, timestamp) 
+         VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`
+      ).bind(session_id, tg_id, role, content, metadata).run();
+    } catch (error) {
+      console.error('Error in logDialog:', error);
+    }
   }
 
-  return new Response('Method Not Allowed', { status: 405, headers: corsHeaders });
-}
+  async getDialogHistory(tg_id: number, limit: number = 10): Promise<Dialog[]> {
+    try {
+      const result = await this.db.prepare(
+        `SELECT * FROM dialogs 
+         WHERE tg_id = ? 
+         ORDER BY id DESC 
+         LIMIT ?`
+      ).bind(tg_id, limit).all();
 
-async function handleStats(request: Request, dbService: D1Service, corsHeaders: any): Promise<Response> {
-  if (request.method === 'GET') {
-    const stats = await dbService.getSimpleStats();
-    return new Response(JSON.stringify(stats), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-    });
+      return (result.results as Dialog[])?.reverse() || [];
+    } catch (error) {
+      console.error('Error in getDialogHistory:', error);
+      return [];
+    }
   }
-
-  return new Response('Method Not Allowed', { status: 405, headers: corsHeaders });
 }

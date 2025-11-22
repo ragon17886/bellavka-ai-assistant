@@ -1,4 +1,3 @@
-import { D1Service } from '../db/D1Service';
 import { Env } from '../index';
 
 export async function handleAdminRequest(request: Request, env: Env, pathname: string): Promise<Response> {
@@ -6,15 +5,13 @@ export async function handleAdminRequest(request: Request, env: Env, pathname: s
   
   const corsHeaders = {
     'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type',
   };
 
   if (request.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
-
-  const dbService = new D1Service(env);
 
   try {
     // 🗃️ DIRECT SQL QUERY
@@ -23,7 +20,7 @@ export async function handleAdminRequest(request: Request, env: Env, pathname: s
         const { query } = await request.json();
         console.log('📊 Executing SQL:', query);
         
-        const result = await dbService.db.prepare(query).all();
+        const result = await env.DB.prepare(query).all();
         return new Response(JSON.stringify({ 
           success: true, 
           data: result.results || [] 
@@ -40,7 +37,7 @@ export async function handleAdminRequest(request: Request, env: Env, pathname: s
     // 👥 USERS
     if (pathname === '/api/admin/users') {
       if (request.method === 'GET') {
-        const result = await dbService.db.prepare('SELECT * FROM users ORDER BY created_at DESC LIMIT 50').all();
+        const result = await env.DB.prepare('SELECT * FROM users ORDER BY created_at DESC LIMIT 50').all();
         return new Response(JSON.stringify(result.results || []), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         });
@@ -54,7 +51,7 @@ export async function handleAdminRequest(request: Request, env: Env, pathname: s
     // 💬 DIALOGS
     if (pathname === '/api/admin/dialogs') {
       if (request.method === 'GET') {
-        const result = await dbService.db.prepare('SELECT * FROM dialogs ORDER BY timestamp DESC LIMIT 50').all();
+        const result = await env.DB.prepare('SELECT * FROM dialogs ORDER BY timestamp DESC LIMIT 50').all();
         return new Response(JSON.stringify(result.results || []), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         });
@@ -68,7 +65,7 @@ export async function handleAdminRequest(request: Request, env: Env, pathname: s
     // 🤖 ASSISTANTS
     if (pathname === '/api/admin/assistants') {
       if (request.method === 'GET') {
-        const result = await dbService.db.prepare('SELECT * FROM assistants ORDER BY created_at DESC').all();
+        const result = await env.DB.prepare('SELECT * FROM assistants ORDER BY created_at DESC').all();
         return new Response(JSON.stringify(result.results || []), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         });
@@ -77,7 +74,7 @@ export async function handleAdminRequest(request: Request, env: Env, pathname: s
         const assistant = await request.json();
         const id = `assistant_${Date.now()}`;
         
-        await dbService.db.prepare(
+        await env.DB.prepare(
           `INSERT INTO assistants (id, name, type, system_prompt, is_active)
            VALUES (?, ?, ?, ?, ?)`
         ).bind(
@@ -88,7 +85,7 @@ export async function handleAdminRequest(request: Request, env: Env, pathname: s
           assistant.is_active ? 1 : 0
         ).run();
 
-        const newAssistant = await dbService.db.prepare('SELECT * FROM assistants WHERE id = ?').bind(id).first();
+        const newAssistant = await env.DB.prepare('SELECT * FROM assistants WHERE id = ?').bind(id).first();
         return new Response(JSON.stringify(newAssistant), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         });
@@ -102,9 +99,9 @@ export async function handleAdminRequest(request: Request, env: Env, pathname: s
     // 📊 STATS
     if (pathname === '/api/admin/stats') {
       if (request.method === 'GET') {
-        const users = await dbService.db.prepare('SELECT COUNT(*) as count FROM users').first() as any;
-        const dialogs = await dbService.db.prepare('SELECT COUNT(*) as count FROM dialogs').first() as any;
-        const assistants = await dbService.db.prepare('SELECT COUNT(*) as count FROM assistants').first() as any;
+        const users = await env.DB.prepare('SELECT COUNT(*) as count FROM users').first() as any;
+        const dialogs = await env.DB.prepare('SELECT COUNT(*) as count FROM dialogs').first() as any;
+        const assistants = await env.DB.prepare('SELECT COUNT(*) as count FROM assistants').first() as any;
 
         return new Response(JSON.stringify({
           users: users?.count || 0,

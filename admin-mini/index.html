@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bellavka Admin</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+            background: #f5f6fa; 
+            color: #2c3e50;
+        }
+        
+        /* Header */
+        .header {
+            background: #2c3e50;
+            color: white;
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        /* Navigation */
+        .nav {
+            background: #34495e;
+            padding: 1rem 2rem;
+        }
+        
+        .nav-tabs {
+            display: flex;
+            gap: 1rem;
+        }
+        
+        .nav-tab {
+            background: none;
+            border: none;
+            color: #bdc3c7;
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .nav-tab.active {
+            background: #3498db;
+            color: white;
+        }
+        
+        /* Main Content */
+        .main {
+            padding: 2rem;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        /* Cards */
+        .card {
+            background: white;
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+        
+        .stat-card {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 8px;
+            text-align: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .stat-number {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #3498db;
+        }
+        
+        /* Tables */
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .data-table th,
+        .data-table td {
+            padding: 1rem;
+            text-align: left;
+            border-bottom: 1px solid #ecf0f1;
+        }
+        
+        .data-table th {
+            background: #34495e;
+            color: white;
+            font-weight: 600;
+        }
+        
+        .data-table tr:hover {
+            background: #f8f9fa;
+        }
+        
+        /* Forms */
+        .form-group {
+            margin-bottom: 1rem;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+            color: #2c3e50;
+        }
+        
+        .form-control {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid #bdc3c7;
+            border-radius: 4px;
+            font-size: 1rem;
+        }
+        
+        textarea.form-control {
+            min-height: 120px;
+            resize: vertical;
+        }
+        
+        .btn {
+            background: #3498db;
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: background 0.3s;
+        }
+        
+        .btn:hover {
+            background: #2980b9;
+        }
+        
+        .btn-success {
+            background: #27ae60;
+        }
+        
+        .btn-success:hover {
+            background: #219a52;
+        }
+        
+        /* Loading & Messages */
+        .loading {
+            text-align: center;
+            padding: 2rem;
+            color: #7f8c8d;
+        }
+        
+        .message {
+            padding: 1rem;
+            border-radius: 4px;
+            margin-bottom: 1rem;
+        }
+        
+        .message.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .message.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        
+        /* SQL Console */
+        .sql-console {
+            background: #2c3e50;
+            color: #ecf0f1;
+            padding: 1rem;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            margin-bottom: 1rem;
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <h1>🏪 Bellavka Admin</h1>
+        <div id="status">🟢 Connected</div>
+    </header>
+    
+    <nav class="nav">
+        <div class="nav-tabs">
+            <button class="nav-tab active" onclick="showTab('dashboard')">📊 Dashboard</button>
+            <button class="nav-tab" onclick="showTab('assistants')">🤖 Assistants</button>
+            <button class="nav-tab" onclick="showTab('users')">👥 Users</button>
+            <button class="nav-tab" onclick="showTab('dialogs')">💬 Dialogs</button>
+            <button class="nav-tab" onclick="showTab('sql')">🔧 SQL Console</button>
+        </div>
+    </nav>
+    
+    <main class="main">
+        <!-- Dashboard Tab -->
+        <div id="dashboard" class="tab-content active">
+            <div class="stats-grid" id="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-number" id="stat-users">0</div>
+                    <div>Users</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="stat-dialogs">0</div>
+                    <div>Dialogs</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="stat-assistants">0</div>
+                    <div>Assistants</div>
+                </div>
+            </div>
+            
+            <div class="card">
+                <h3>Recent Activity</h3>
+                <div id="recent-activity" class="loading">Loading...</div>
+            </div>
+        </div>
+        
+        <!-- Assistants Tab -->
+        <div id="assistants" class="tab-content">
+            <div class="card">
+                <h3>Create New Assistant</h3>
+                <form id="assistant-form">
+                    <div class="form-group">
+                        <label>Name:</label>
+                        <input type="text" class="form-control" name="name" required>
+                    </div>
+                    <div class="form-group">
+                        <label>System Prompt:</label>
+                        <textarea class="form-control" name="system_prompt" required></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-success">Create Assistant</button>
+                </form>
+            </div>
+            
+            <div class="card">
+                <h3>Assistants List</h3>
+                <div id="assistants-list" class="loading">Loading assistants...</div>
+            </div>
+        </div>
+        
+        <!-- Users Tab -->
+        <div id="users" class="tab-content">
+            <div class="card">
+                <h3>Users</h3>
+                <div id="users-list" class="loading">Loading users...</div>
+            </div>
+        </div>
+        
+        <!-- Dialogs Tab -->
+        <div id="dialogs" class="tab-content">
+            <div class="card">
+                <h3>Recent Dialogs</h3>
+                <div id="dialogs-list" class="loading">Loading dialogs...</div>
+            </div>
+        </div>
+        
+        <!-- SQL Console Tab -->
+        <div id="sql" class="tab-content">
+            <div class="card">
+                <h3>SQL Console</h3>
+                <div class="sql-console" id="sql-result">Enter SQL query and click Execute</div>
+                <div class="form-group">
+                    <label>SQL Query:</label>
+                    <textarea class="form-control" id="sql-query" rows="4">SELECT name FROM sqlite_master WHERE type='table'</textarea>
+                </div>
+                <button class="btn" onclick="executeSQL()">Execute SQL</button>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        const API_BASE = 'https://bellavka-ai-assistant-worker.ragon17886.workers.dev/api/admin';
+        
+        // Tab Management
+        function showTab(tabName) {
+            // Hide all tabs
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            document.querySelectorAll('.nav-tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            // Show selected tab
+            document.getElementById(tabName).classList.add('active');
+            event.target.classList.add('active');
+            
+            // Load tab data
+            loadTabData(tabName);
+        }
+        
+        // Load data for specific tab
+        function loadTabData(tabName) {
+            switch(tabName) {
+                case 'dashboard':
+                    loadStats();
+                    loadRecentActivity();
+                    break;
+                case 'assistants':
+                    loadAssistants();
+                    break;
+                case 'users':
+                    loadUsers();
+                    break;
+                case 'dialogs':
+                    loadDialogs();
+                    break;
+            }
+        }
+        
+        // API Functions
+        async function apiCall(endpoint, options = {}) {
+            try {
+                const response = await fetch(`${API_BASE}/${endpoint}`, {
+                    headers: {
+                        'Content-Type': 'application/json',
+                        ...options.headers
+                    },
+                    ...options
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                return await response.json();
+            } catch (error) {
+                console.error('API Error:', error);
+                showMessage(`API Error: ${error.message}`, 'error');
+                throw error;
+            }
+        }
+        
+        // Load Statistics
+        async function loadStats() {
+            try {
+                const stats = await apiCall('stats');
+                document.getElementById('stat-users').textContent = stats.users;
+                document.getElementById('stat-dialogs').textContent = stats.dialogs;
+                document.getElementById('stat-assistants').textContent = stats.assistants;
+            } catch (error) {
+                document.getElementById('stats-grid').innerHTML = '<div class="message error">Failed to load statistics</div>';
+            }
+        }
+        
+        // Load Recent Activity
+        async function loadRecentActivity() {
+            try {
+                const dialogs = await apiCall('dialogs?limit=5');
+                const activity = dialogs.map(d => 
+                    `${new Date(d.timestamp).toLocaleString()}: User ${d.tg_id} - ${d.content?.substring(0, 50)}...`
+                ).join('<br>');
+                document.getElementById('recent-activity').innerHTML = activity || 'No recent activity';
+            } catch (error) {
+                document.getElementById('recent-activity').innerHTML = '<div class="message error">Failed to load activity</div>';
+            }
+        }
+        
+        // Load Assistants
+        async function loadAssistants() {
+            try {
+                const assistants = await apiCall('assistants');
+                const html = assistants.length > 0 
+                    ? `<table class="data-table">
+                         <thead><tr><th>Name</th><th>Type</th><th>Active</th><th>Created</th></tr></thead>
+                         <tbody>
+                           ${assistants.map(a => `
+                             <tr>
+                               <td>${a.name}</td>
+                               <td>${a.type}</td>
+                               <td>${a.is_active ? '✅' : '❌'}</td>
+                               <td>${new Date(a.created_at).toLocaleDateString()}</td>
+                             </tr>
+                           `).join('')}
+                         </tbody>
+                       </table>`
+                    : '<div class="message">No assistants found</div>';
+                document.getElementById('assistants-list').innerHTML = html;
+            } catch (error) {
+                document.getElementById('assistants-list').innerHTML = '<div class="message error">Failed to load assistants</div>';
+            }
+        }
+        
+        // Load Users
+        async function loadUsers() {
+            try {
+                const users = await apiCall('users');
+                const html = users.length > 0 
+                    ? `<table class="data-table">
+                         <thead><tr><th>ID</th><th>Name</th><th>Last Activity</th></tr></thead>
+                         <tbody>
+                           ${users.map(u => `
+                             <tr>
+                               <td>${u.tg_id}</td>
+                               <td>${u.full_name || 'N/A'}</td>
+                               <td>${u.last_activity ? new Date(u.last_activity).toLocaleDateString() : 'Never'}</td>
+                             </tr>
+                           `).join('')}
+                         </tbody>
+                       </table>`
+                    : '<div class="message">No users found</div>';
+                document.getElementById('users-list').innerHTML = html;
+            } catch (error) {
+                document.getElementById('users-list').innerHTML = '<div class="message error">Failed to load users</div>';
+            }
+        }
+        
+        // Load Dialogs
+        async function loadDialogs() {
+            try {
+                const dialogs = await apiCall('dialogs');
+                const html = dialogs.length > 0 
+                    ? `<table class="data-table">
+                         <thead><tr><th>Time</th><th>User</th><th>Role</th><th>Message</th></tr></thead>
+                         <tbody>
+                           ${dialogs.map(d => `
+                             <tr>
+                               <td>${new Date(d.timestamp).toLocaleString()}</td>
+                               <td>${d.tg_id}</td>
+                               <td>${d.role}</td>
+                               <td>${d.content?.substring(0, 100)}...</td>
+                             </tr>
+                           `).join('')}
+                         </tbody>
+                       </table>`
+                    : '<div class="message">No dialogs found</div>';
+                document.getElementById('dialogs-list').innerHTML = html;
+            } catch (error) {
+                document.getElementById('dialogs-list').innerHTML = '<div class="message error">Failed to load dialogs</div>';
+            }
+        }
+        
+        // Create Assistant
+        document.getElementById('assistant-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const formData = new FormData(e.target);
+            const assistant = {
+                name: formData.get('name'),
+                type: 'ai',
+                system_prompt: formData.get('system_prompt'),
+                is_active: true
+            };
+            
+            try {
+                await apiCall('assistants', {
+                    method: 'POST',
+                    body: JSON.stringify(assistant)
+                });
+                showMessage('Assistant created successfully!', 'success');
+                e.target.reset();
+                loadAssistants();
+            } catch (error) {
+                showMessage('Failed to create assistant', 'error');
+            }
+        });
+        
+        // SQL Console
+        async function executeSQL() {
+            const query = document.getElementById('sql-query').value;
+            try {
+                const result = await apiCall('query', {
+                    method: 'POST',
+                    body: JSON.stringify({ query })
+                });
+                document.getElementById('sql-result').textContent = JSON.stringify(result, null, 2);
+            } catch (error) {
+                document.getElementById('sql-result').textContent = `Error: ${error.message}`;
+            }
+        }
+        
+        // Utility Functions
+        function showMessage(text, type) {
+            const message = document.createElement('div');
+            message.className = `message ${type}`;
+            message.textContent = text;
+            document.querySelector('.main').prepend(message);
+            setTimeout(() => message.remove(), 5000);
+        }
+        
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            loadStats();
+            loadRecentActivity();
+        });
+    </script>
+</body>
+</html>
