@@ -1,118 +1,162 @@
 import { Env } from '../index';
-import { D1Service } from '../db/D1Service';
-import { TelegramUser } from '../db/types';
-import { GeminiService } from '../assistants/GeminiService';
 
-// Типы для Telegram
-interface TelegramMessage {
-message_id: number;
-from: TelegramUser;
-chat: {
-id: number;
-};
-text?: string;
-photo?: Array<{
-file_id: string;
-file_size: number;
-}>;
+interface QueryRequest {
+  query: string;
 }
 
-/**
-
-Отправка сообщения в Telegram
-*/
-async function sendMessage(chatId: number, text: string, env: Env): Promise<void> {
-try {
-const response = await fetch(https://api.telegram.org/bot${env.TELEGRAM_BOT_TOKEN}/sendMessage, {
-method: 'POST',
-headers: {
-'Content-Type': 'application/json',
-},
-body: JSON.stringify({
-chat_id: chatId,
-text: text,
-}),
-});
-
-if (!response.ok) {
-console.error('Telegram API error:', await response.text());
-}
-} catch (error) {
-console.error('Error sending message to Telegram:', error);
-}
+interface AssistantRequest {
+  name: string;
+  type: string;
+  system_prompt: string;
+  is_active: boolean;
 }
 
-/**
-
-Основной обработчик входящих сообщений Telegram.
-*/
-export async function handleMessage(message: any, env: Env, dbService: D1Service): Promise<void> {
-const chatId = message.chat.id;
-const tgUser: TelegramUser = message.from;
-const text = message.text;
-const isPhoto = message.photo && message.photo.length > 0;
-
-console.log(Processing message from ${tgUser.first_name}: ${text});
-
-try {
-// 1. Получение или создание пользователя и логирование сообщения
-const user = await dbService.getOrCreateUser(tgUser);
-if (text) {
-  await dbService.logDialog(user.tg_id, 'user', text);
-} else if (isPhoto && message.photo) {
-  const largestPhoto = message.photo.reduce((prev: any, current: any) => 
-    (prev.file_size > current.file_size) ? prev : current
-  );
-  await dbService.logDialog(user.tg_id, 'user', 'Photo received', JSON.stringify({ file_id: largestPhoto.file_id }));
-}
-
-// 2. Обработка команды /start
-if (text === '/start') {
-  await sendMessage(chatId, `Добро пожаловать, ${user.full_name}! Я ваш AI-ассистент Bellavka. Задайте мне любой вопрос!`, env);
-  return;
-}
-
-// 3. Обработка фото (временно отключено)
-if (isPhoto) {
-  await sendMessage(chatId, 'Извините, обработка фото временно недоступна. Отправьте текстовое сообщение.', env);
-  return;
-}
-
-// 4. Обработка текстового запроса с использованием Gemini
-if (text) {
-  // Получаем историю диалогов для контекста
-  const history = await dbService.getDialogHistory(user.tg_id, 6);
+export async function handleAdminRequest(request: Request, env: Env, pathname: string): Promise<Response> {
+  console.log('🔧 Admin API called:', pathname);
   
-  // Системный промпт для ассистента
-  const systemInstruction = `Ты — AI-ассистент Bellavka. Твой стиль общения — вежливый, дружелюбный, но профессиональный. Отвечай на вопросы о товарах и услугах Bellavka. Если не знаешь ответа, вежливо предложи уточнить вопрос или обратиться к менеджеру. Будь кратким и полезным. Используй историю диалога для контекста.`;
-  // Генерируем ответ с помощью Gemini
-  const geminiService = new GeminiService(env);
-  let responseText: string;
+  const corsHeaders = {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type',
+  };
 
-  try {
-    if (history.length > 0) {
-      responseText = await geminiService.generateTextResponse(systemInstruction, history);
-    } else {
-      // Если истории нет, используем быстрый ответ
-      responseText = await geminiService.generateQuickResponse(text, systemInstruction);
-    }
-  } catch (geminiError) {
-    console.error('Gemini service error:', geminiError);
-    responseText = 'Извините, в настоящее время сервис временно недоступен. Пожалуйста, попробуйте позже.';
+  if (request.method === 'OPTIONS') {
+    return new Response(null, { headers: corsHeaders });
   }
 
-  // Логируем ответ ассистента
-  await dbService.logDialog(user.tg_id, 'assistant', responseText);
+  try {
+    // 🗃️ DIRECT SQL QUERY
+    if (pathname === '/api/admin/query') {
+      if (request.method === 'POST') {
+        const body: QueryRequest = await request.json() as QueryRequest;
+        const query = body.query;
+        
+        // Базовая защита от опасных операций
+        const trimmedQuery = query.trim().toLowerCase();
+        if (trimmedQuery.startsWith('drop') || 
+            trimmedQuery.startsWith('delete') || 
+            trimmedQuery.startsWith('update') ||
+            trimmedQuery.startsWith('insert') ||
+            trimmedQuery.startsWith('alter')) {
+          return new Response(JSON.stringify({ 
+            error: 'Dangerous queries are not allowed in admin panel' 
+          }), {
+            status: 400,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          });
+        }
+        
+        console.log('📊 Executing SQL:', query);
+        
+        const result = await env.DB.prepare(query).all();
+        return new Response(JSON.stringify({ 
+          success: true, 
+          data: result.results || [] 
+        }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
+      return new Response(JSON.stringify({ error: 'Method Not Allowed' }), { 
+        status: 405, 
+        headers: corsHeaders 
+      });
+    }
 
-  // Отправляем ответ пользователю
-  await sendMessage(chatId, responseText, env);
-  return;
-}
+    // 👥 USERS
+    if (pathname === '/api/admin/users') {
+      if (request.method === 'GET') {
+        const result = await env.DB.prepare('SELECT * FROM users ORDER BY created_at DESC LIMIT 50').all();
+        return new Response(JSON.stringify(result.results || []), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
+      return new Response(JSON.stringify({ error: 'Method Not Allowed' }), { 
+        status: 405, 
+        headers: corsHeaders 
+      });
+    }
 
-// 5. Обработка других типов сообщений
-await sendMessage(chatId, `${user.full_name}, я могу обрабатывать только текст и фото. Отправьте текстовое сообщение!`, env);
-} catch (error) {
-console.error('Error in handleMessage:', error);
-await sendMessage(chatId, 'Произошла ошибка при обработке вашего сообщения. Пожалуйста, попробуйте еще раз.', env);
-}
+    // 💬 DIALOGS
+    if (pathname === '/api/admin/dialogs') {
+      if (request.method === 'GET') {
+        const result = await env.DB.prepare('SELECT * FROM dialogs ORDER BY timestamp DESC LIMIT 50').all();
+        return new Response(JSON.stringify(result.results || []), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
+      return new Response(JSON.stringify({ error: 'Method Not Allowed' }), { 
+        status: 405, 
+        headers: corsHeaders 
+      });
+    }
+
+    // 🤖 ASSISTANTS
+    if (pathname === '/api/admin/assistants') {
+      if (request.method === 'GET') {
+        const result = await env.DB.prepare('SELECT * FROM assistants ORDER BY created_at DESC').all();
+        return new Response(JSON.stringify(result.results || []), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
+      if (request.method === 'POST') {
+        const assistant: AssistantRequest = await request.json() as AssistantRequest;
+        const id = `assistant_${Date.now()}`;
+        
+        await env.DB.prepare(
+          `INSERT INTO assistants (id, name, type, system_prompt, is_active)
+           VALUES (?, ?, ?, ?, ?)`
+        ).bind(
+          id,
+          assistant.name,
+          assistant.type || 'ai',
+          assistant.system_prompt,
+          assistant.is_active ? 1 : 0
+        ).run();
+
+        const newAssistant = await env.DB.prepare('SELECT * FROM assistants WHERE id = ?').bind(id).first();
+        return new Response(JSON.stringify(newAssistant), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
+      return new Response(JSON.stringify({ error: 'Method Not Allowed' }), { 
+        status: 405, 
+        headers: corsHeaders 
+      });
+    }
+
+    // 📊 STATS
+    if (pathname === '/api/admin/stats') {
+      if (request.method === 'GET') {
+        const users = await env.DB.prepare('SELECT COUNT(*) as count FROM users').first() as { count: number };
+        const dialogs = await env.DB.prepare('SELECT COUNT(*) as count FROM dialogs').first() as { count: number };
+        const assistants = await env.DB.prepare('SELECT COUNT(*) as count FROM assistants').first() as { count: number };
+
+        return new Response(JSON.stringify({
+          users: users?.count || 0,
+          dialogs: dialogs?.count || 0,
+          assistants: assistants?.count || 0
+        }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
+      return new Response(JSON.stringify({ error: 'Method Not Allowed' }), { 
+        status: 405, 
+        headers: corsHeaders 
+      });
+    }
+
+    // ❌ NOT FOUND
+    console.log('❌ Endpoint not found:', pathname);
+    return new Response(JSON.stringify({ error: 'Endpoint not found', path: pathname }), {
+      status: 404,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    });
+
+  } catch (error: any) {
+    console.error('💥 Admin API error:', error);
+    return new Response(JSON.stringify({ error: 'Internal error', details: error.message }), {
+      status: 500,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    });
+  }
 }
