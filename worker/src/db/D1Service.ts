@@ -52,6 +52,8 @@ const fullName = last_name ? ${first_name} ${last_name} : first_name;
     created_at: new Date().toISOString()
   };
 }
+}
+
 async logDialog(tg_id: number, role: 'user' | 'assistant' | 'system', content: string, metadata: string | null = null): Promise<void> {
 try {
 const session_id = tg_${tg_id}_${Date.now()};
