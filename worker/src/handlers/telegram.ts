@@ -42,6 +42,35 @@ async function sendMessage(chatId: number, text: string, env: Env): Promise<void
 }
 
 /**
+ * Получение активного ассистента из БД
+ */
+async function getActiveAssistant(db: D1Database): Promise<string> {
+  try {
+    // Сначала ищем ассистента с именем 'main'
+    let assistant = await db.prepare(
+      'SELECT system_prompt FROM assistants WHERE name = ? AND is_active = 1'
+    ).bind('main').first() as { system_prompt: string } | null;
+
+    // Если не нашли, берем первого активного ассистента
+    if (!assistant) {
+      assistant = await db.prepare(
+        'SELECT system_prompt FROM assistants WHERE is_active = 1 ORDER BY created_at LIMIT 1'
+      ).first() as { system_prompt: string } | null;
+    }
+
+    return assistant?.system_prompt || `Ты — AI-ассистент Bellavka. Твой стиль общения — вежливый, дружелюбный, но профессиональный.
+Отвечай на вопросы о товарах и услугах Bellavka. Если не знаешь ответа, вежливо предложи уточнить вопрос или обратиться к менеджеру.
+Будь кратким и полезным. Используй историю диалога для контекста.`;
+
+  } catch (error) {
+    console.error('Error getting assistant:', error);
+    return `Ты — AI-ассистент Bellavka. Твой стиль общения — вежливый, дружелюбный, но профессиональный.
+Отвечай на вопросы о товарах и услугах Bellavka. Если не знаешь ответа, вежливо предложи уточнить вопрос или обратиться к менеджеру.
+Будь кратким и полезным. Используй историю диалога для контекста.`;
+  }
+}
+
+/**
  * Основной обработчик входящих сообщений Telegram.
  */
 export async function handleMessage(message: any, env: Env, dbService: D1Service): Promise<void> {
@@ -79,13 +108,11 @@ export async function handleMessage(message: any, env: Env, dbService: D1Service
 
     // 4. Обработка текстового запроса с использованием Gemini
     if (text) {
+      // Получаем системный промпт из БД
+      const systemInstruction = await getActiveAssistant(env.DB);
+      
       // Получаем историю диалогов для контекста
       const history = await dbService.getDialogHistory(user.tg_id, 6);
-      
-      // Системный промпт для ассистента
-      const systemInstruction = `Ты — AI-ассистент Bellavka. Твой стиль общения — вежливый, дружелюбный, но профессиональный.
-Отвечай на вопросы о товарах и услугах Bellavka. Если не знаешь ответа, вежливо предложи уточнить вопрос или обратиться к менеджеру.
-Будь кратким и полезным. Используй историю диалога для контекста.`;
 
       // Генерируем ответ с помощью Gemini
       const geminiService = new GeminiService(env);
