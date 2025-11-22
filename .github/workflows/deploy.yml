@@ -1,20 +1,104 @@
-name: Deploy Mini Admin
+name: Deploy to GitHub Pages
 
 on:
   push:
-    branches: [main]
+    branches: [ main ]
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
 
 jobs:
   deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - name: Deploy Mini Admin
+      - name: Checkout
+        uses: actions/checkout@v4
+        
+      - name: Setup Pages
+        uses: actions/configure-pages@v4
+        
+      - name: Create admin files
         run: |
           mkdir -p docs
-          cp admin-mini/index.html docs/index.html
-      - name: Deploy to GitHub Pages
-        uses: peaceiris/actions-gh-pages@v3
+          # Создаем простую HTML страницу
+          cat > docs/index.html << 'EOF'
+          <!DOCTYPE html>
+          <html>
+          <head>
+              <title>Bellavka Admin</title>
+              <style>
+                  body { font-family: Arial; margin: 40px; }
+                  .container { max-width: 800px; margin: 0 auto; }
+                  .card { background: #f5f5f5; padding: 20px; margin: 20px 0; border-radius: 8px; }
+                  button { padding: 10px 20px; margin: 5px; cursor: pointer; }
+                  pre { background: #2c3e50; color: white; padding: 15px; border-radius: 4px; overflow: auto; }
+              </style>
+          </head>
+          <body>
+              <div class="container">
+                  <h1>🚀 Bellavka Admin</h1>
+                  <div class="card">
+                      <h3>API Endpoints Test</h3>
+                      <button onclick="test('stats')">📊 Stats</button>
+                      <button onclick="test('users')">👥 Users</button>
+                      <button onclick="test('dialogs')">💬 Dialogs</button>
+                      <button onclick="test('assistants')">🤖 Assistants</button>
+                      <button onclick="testQuery()">🔧 SQL Query</button>
+                  </div>
+                  <div id="result"></div>
+              </div>
+
+              <script>
+                  const API = 'https://bellavka-ai-assistant-worker.ragon17886.workers.dev/api/admin';
+                  
+                  async function test(endpoint) {
+                      const result = document.getElementById('result');
+                      result.innerHTML = `Testing ${endpoint}...`;
+                      
+                      try {
+                          const response = await fetch(`${API}/${endpoint}`);
+                          const data = await response.json();
+                          result.innerHTML = `<pre>${JSON.stringify(data, null, 2)}</pre>`;
+                      } catch (error) {
+                          result.innerHTML = `ERROR: ${error}`;
+                      }
+                  }
+
+                  async function testQuery() {
+                      const query = 'SELECT name FROM sqlite_master WHERE type="table"';
+                      try {
+                          const response = await fetch(`${API}/query`, {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({ query })
+                          });
+                          const data = await response.json();
+                          document.getElementById('result').innerHTML = `<pre>${JSON.stringify(data, null, 2)}</pre>`;
+                      } catch (error) {
+                          document.getElementById('result').innerHTML = `ERROR: ${error}`;
+                      }
+                  }
+
+                  test('stats');
+              </script>
+          </body>
+          </html>
+          EOF
+          
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./docs
+          path: docs/
+          
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

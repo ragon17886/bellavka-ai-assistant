@@ -59,8 +59,8 @@ export async function handleMessage(message: any, env: Env, dbService: D1Service
         if (text) {
             await dbService.logDialog(user.tg_id, 'user', text);
         } else if (isPhoto && message.photo) {
-            const largestPhoto = message.photo.reduce((prev, current) => 
-                (prev.file_size > current.file_size) ? prev : current
+            const largestPhoto = message.photo.reduce((prev: any, current: any) => 
+               (prev.file_size > current.file_size) ? prev : current
             );
             await dbService.logDialog(user.tg_id, 'user', 'Photo received', JSON.stringify({ file_id: largestPhoto.file_id }));
         }

@@ -1,5 +1,16 @@
 import { Env } from '../index';
 
+interface QueryRequest {
+  query: string;
+}
+
+interface AssistantRequest {
+  name: string;
+  type: string;
+  system_prompt: string;
+  is_active: boolean;
+}
+
 export async function handleAdminRequest(request: Request, env: Env, pathname: string): Promise<Response> {
   console.log('🔧 Admin API called:', pathname);
   
@@ -17,7 +28,9 @@ export async function handleAdminRequest(request: Request, env: Env, pathname: s
     // 🗃️ DIRECT SQL QUERY
     if (pathname === '/api/admin/query') {
       if (request.method === 'POST') {
-        const { query } = await request.json();
+        const body: QueryRequest = await request.json() as QueryRequest;
+        const query = body.query;
+        
         console.log('📊 Executing SQL:', query);
         
         const result = await env.DB.prepare(query).all();
@@ -71,7 +84,7 @@ export async function handleAdminRequest(request: Request, env: Env, pathname: s
         });
       }
       if (request.method === 'POST') {
-        const assistant = await request.json();
+        const assistant: AssistantRequest = await request.json() as AssistantRequest;
         const id = `assistant_${Date.now()}`;
         
         await env.DB.prepare(
@@ -99,9 +112,9 @@ export async function handleAdminRequest(request: Request, env: Env, pathname: s
     // 📊 STATS
     if (pathname === '/api/admin/stats') {
       if (request.method === 'GET') {
-        const users = await env.DB.prepare('SELECT COUNT(*) as count FROM users').first() as any;
-        const dialogs = await env.DB.prepare('SELECT COUNT(*) as count FROM dialogs').first() as any;
-        const assistants = await env.DB.prepare('SELECT COUNT(*) as count FROM assistants').first() as any;
+        const users = await env.DB.prepare('SELECT COUNT(*) as count FROM users').first() as { count: number };
+        const dialogs = await env.DB.prepare('SELECT COUNT(*) as count FROM dialogs').first() as { count: number };
+        const assistants = await env.DB.prepare('SELECT COUNT(*) as count FROM assistants').first() as { count: number };
 
         return new Response(JSON.stringify({
           users: users?.count || 0,

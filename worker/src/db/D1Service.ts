@@ -16,14 +16,14 @@ export class D1Service {
       // Поиск пользователя
       const existingUser = await this.db.prepare(
         'SELECT * FROM users WHERE tg_id = ?'
-      ).bind(tg_id).first();
+      ).bind(tg_id).first() as User | null;
 
       if (existingUser) {
         // Обновление активности
         await this.db.prepare(
           'UPDATE users SET last_activity = CURRENT_TIMESTAMP WHERE tg_id = ?'
         ).bind(tg_id).run();
-        return existingUser as User;
+        return existingUser;
       }
 
       // Создание нового пользователя
@@ -34,9 +34,9 @@ export class D1Service {
 
       const newUser = await this.db.prepare(
         'SELECT * FROM users WHERE tg_id = ?'
-      ).bind(tg_id).first();
+      ).bind(tg_id).first() as User;
 
-      return newUser as User;
+      return newUser;
 
     } catch (error) {
       console.error('Error in getOrCreateUser:', error);
