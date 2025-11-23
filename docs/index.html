@@ -4,202 +4,423 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Bellavka Admin</title>
+    <link rel="icon" type="image/x-icon" href="./assets/favicon.ico">
+    <link rel="icon" type="image/svg+xml" href="./assets/favicon.svg">
+    <link rel="apple-touch-icon" href="./assets/favicon.png">
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { 
-            font-family: -apple-system, BlinkMacSystemFont, sans-serif;
-            background: #f5f6fa; 
-            color: #2c3e50;
+        * { 
+            margin: 0; 
+            padding: 0; 
+            box-sizing: border-box; 
         }
         
+        :root {
+            --primary-dark: #154734;
+            --primary-light: #d4eb8e;
+            --background: #ffffff;
+            --text: #1a1a1a;
+            --text-light: #666666;
+            --border: #e0e0e0;
+            --shadow: 0 2px 12px rgba(21, 71, 52, 0.08);
+            --transition: all 0.2s ease;
+        }
+        
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--background);
+            color: var(--text);
+            line-height: 1.6;
+        }
+        
+        /* Header */
         .header {
-            background: #2c3e50;
+            background: var(--primary-dark);
             color: white;
-            padding: 1rem 2rem;
+            padding: 1.5rem 2rem;
             display: flex;
             justify-content: space-between;
             align-items: center;
+            border-bottom: 3px solid var(--primary-light);
         }
         
+        .logo-container {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+        
+        .logo {
+            height: 32px;
+            width: auto;
+        }
+        
+        .header h1 {
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+        
+        .status {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.9rem;
+        }
+        
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #22c55e;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        /* Navigation */
         .nav {
-            background: #34495e;
-            padding: 1rem 2rem;
+            background: var(--background);
+            padding: 0 2rem;
+            border-bottom: 1px solid var(--border);
         }
         
         .nav-tabs {
             display: flex;
-            gap: 1rem;
+            gap: 0;
         }
         
         .nav-tab {
             background: none;
             border: none;
-            color: #bdc3c7;
-            padding: 0.5rem 1rem;
-            border-radius: 4px;
+            color: var(--text-light);
+            padding: 1rem 1.5rem;
             cursor: pointer;
-            transition: all 0.3s;
+            transition: var(--transition);
+            border-bottom: 2px solid transparent;
+            font-weight: 500;
+            position: relative;
+        }
+        
+        .nav-tab:hover {
+            color: var(--primary-dark);
+            background: var(--primary-light);
         }
         
         .nav-tab.active {
-            background: #3498db;
-            color: white;
+            color: var(--primary-dark);
+            border-bottom-color: var(--primary-dark);
         }
         
+        /* Main Content */
         .main {
             padding: 2rem;
-            max-width: 1200px;
+            max-width: 1400px;
             margin: 0 auto;
         }
         
         .tab-content {
             display: none;
+            animation: fadeIn 0.3s ease;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
         }
         
         .tab-content.active {
             display: block;
         }
         
+        /* Cards */
         .card {
-            background: white;
-            border-radius: 8px;
-            padding: 1.5rem;
-            margin-bottom: 1rem;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            background: var(--background);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 2rem;
+            margin-bottom: 1.5rem;
+            box-shadow: var(--shadow);
+            transition: var(--transition);
         }
         
+        .card:hover {
+            box-shadow: 0 4px 20px rgba(21, 71, 52, 0.12);
+        }
+        
+        .card h3 {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-bottom: 1.5rem;
+            color: var(--primary-dark);
+        }
+        
+        /* Stats Grid */
         .stats-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 1rem;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 1.5rem;
             margin-bottom: 2rem;
         }
         
         .stat-card {
-            background: white;
-            padding: 1.5rem;
-            border-radius: 8px;
+            background: var(--background);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 2rem;
             text-align: center;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            box-shadow: var(--shadow);
+            transition: var(--transition);
+        }
+        
+        .stat-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(21, 71, 52, 0.15);
         }
         
         .stat-number {
-            font-size: 2rem;
-            font-weight: bold;
-            color: #3498db;
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: var(--primary-dark);
+            margin-bottom: 0.5rem;
         }
         
+        .stat-label {
+            color: var(--text-light);
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+        
+        /* Tables */
         .data-table {
             width: 100%;
             border-collapse: collapse;
-            background: white;
+            background: var(--background);
             border-radius: 8px;
             overflow: hidden;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            box-shadow: var(--shadow);
         }
         
         .data-table th,
         .data-table td {
-            padding: 1rem;
+            padding: 1.25rem 1rem;
             text-align: left;
-            border-bottom: 1px solid #ecf0f1;
+            border-bottom: 1px solid var(--border);
         }
         
         .data-table th {
-            background: #34495e;
-            color: white;
+            background: var(--primary-light);
+            color: var(--primary-dark);
             font-weight: 600;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .data-table tr:last-child td {
+            border-bottom: none;
         }
         
         .data-table tr:hover {
-            background: #f8f9fa;
+            background: var(--primary-light);
         }
         
+        /* Forms */
         .form-group {
-            margin-bottom: 1rem;
+            margin-bottom: 1.5rem;
         }
         
         .form-group label {
             display: block;
             margin-bottom: 0.5rem;
             font-weight: 600;
-            color: #2c3e50;
+            color: var(--primary-dark);
         }
         
         .form-control {
             width: 100%;
-            padding: 0.75rem;
-            border: 1px solid #bdc3c7;
-            border-radius: 4px;
+            padding: 1rem;
+            border: 1px solid var(--border);
+            border-radius: 8px;
             font-size: 1rem;
+            transition: var(--transition);
+            background: var(--background);
+        }
+        
+        .form-control:focus {
+            outline: none;
+            border-color: var(--primary-dark);
+            box-shadow: 0 0 0 3px rgba(21, 71, 52, 0.1);
         }
         
         textarea.form-control {
             min-height: 120px;
             resize: vertical;
+            font-family: inherit;
         }
         
+        /* Buttons */
         .btn {
-            background: #3498db;
+            background: var(--primary-dark);
             color: white;
             border: none;
-            padding: 0.75rem 1.5rem;
-            border-radius: 4px;
+            padding: 1rem 2rem;
+            border-radius: 8px;
             cursor: pointer;
             font-size: 1rem;
-            transition: background 0.3s;
+            font-weight: 600;
+            transition: var(--transition);
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
         }
         
         .btn:hover {
-            background: #2980b9;
+            background: #0f3526;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(21, 71, 52, 0.3);
         }
         
         .btn-success {
-            background: #27ae60;
+            background: var(--primary-dark);
         }
         
         .btn-success:hover {
-            background: #219a52;
+            background: #0f3526;
         }
         
+        .refresh-btn {
+            background: transparent;
+            color: var(--primary-dark);
+            border: 1px solid var(--primary-dark);
+            padding: 0.75rem 1.5rem;
+        }
+        
+        .refresh-btn:hover {
+            background: var(--primary-light);
+            transform: none;
+            box-shadow: none;
+        }
+        
+        /* Loading & Messages */
         .loading {
             text-align: center;
-            padding: 2rem;
-            color: #7f8c8d;
+            padding: 3rem;
+            color: var(--text-light);
+        }
+        
+        .skeleton {
+            background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+            background-size: 200% 100%;
+            animation: loading 1.5s infinite;
+            border-radius: 4px;
+            height: 1rem;
+            margin-bottom: 0.5rem;
+        }
+        
+        @keyframes loading {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
         }
         
         .message {
-            padding: 1rem;
-            border-radius: 4px;
-            margin-bottom: 1rem;
+            padding: 1rem 1.5rem;
+            border-radius: 8px;
+            margin-bottom: 1.5rem;
+            border-left: 4px solid;
+            animation: slideIn 0.3s ease;
+        }
+        
+        @keyframes slideIn {
+            from { transform: translateX(-10px); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
         }
         
         .message.success {
-            background: #d4edda;
-            color: #155724;
-            border: 1px solid #c3e6cb;
+            background: var(--primary-light);
+            color: var(--primary-dark);
+            border-left-color: var(--primary-dark);
         }
         
         .message.error {
-            background: #f8d7da;
-            color: #721c24;
-            border: 1px solid #f5c6cb;
+            background: #fee2e2;
+            color: #dc2626;
+            border-left-color: #dc2626;
         }
-
-        .refresh-btn {
-            background: #95a5a6;
-            margin-left: 10px;
+        
+        /* Activity Feed */
+        .activity-feed {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
         }
-
-        .refresh-btn:hover {
-            background: #7f8c8d;
+        
+        .activity-item {
+            padding: 1.5rem;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            background: var(--background);
+            transition: var(--transition);
+        }
+        
+        .activity-item:hover {
+            border-color: var(--primary-dark);
+            background: var(--primary-light);
+        }
+        
+        .activity-time {
+            font-size: 0.8rem;
+            color: var(--text-light);
+            margin-bottom: 0.5rem;
+        }
+        
+        .activity-content {
+            color: var(--text);
+            line-height: 1.5;
+        }
+        
+        /* Responsive */
+        @media (max-width: 768px) {
+            .header {
+                padding: 1rem;
+                flex-direction: column;
+                gap: 1rem;
+                text-align: center;
+            }
+            
+            .nav {
+                padding: 0 1rem;
+            }
+            
+            .nav-tabs {
+                overflow-x: auto;
+            }
+            
+            .main {
+                padding: 1rem;
+            }
+            
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .card {
+                padding: 1.5rem;
+            }
         }
     </style>
 </head>
 <body>
     <header class="header">
-        <h1>🏪 Bellavka Admin</h1>
-        <div id="status">🟢 Connected</div>
+        <div class="logo-container">
+            <img src="./assets/logo.png" alt="FIRMOVA" class="logo" onerror="this.style.display='none'">
+            <h1>Bellavka Admin</h1>
+        </div>
+        <div class="status">
+            <div class="status-dot"></div>
+            <span>Connected</span>
+        </div>
     </header>
     
     <nav class="nav">
@@ -217,22 +438,30 @@
             <div class="stats-grid" id="stats-grid">
                 <div class="stat-card">
                     <div class="stat-number" id="stat-users">0</div>
-                    <div>Users</div>
+                    <div class="stat-label">Total Users</div>
                 </div>
                 <div class="stat-card">
                     <div class="stat-number" id="stat-dialogs">0</div>
-                    <div>Dialogs</div>
+                    <div class="stat-label">Dialog Sessions</div>
                 </div>
                 <div class="stat-card">
                     <div class="stat-number" id="stat-assistants">0</div>
-                    <div>Assistants</div>
+                    <div class="stat-label">AI Assistants</div>
                 </div>
             </div>
             
             <div class="card">
-                <h3>Recent Activity</h3>
-                <button class="btn refresh-btn" onclick="loadRecentActivity()">🔄 Refresh</button>
-                <div id="recent-activity" class="loading">Loading...</div>
+                <div style="display: flex; justify-content: between; align-items: center; margin-bottom: 1.5rem;">
+                    <h3 style="margin: 0;">Recent Activity</h3>
+                    <button class="btn refresh-btn" onclick="loadRecentActivity()">
+                        <span>🔄</span> Refresh
+                    </button>
+                </div>
+                <div id="recent-activity" class="loading">
+                    <div class="skeleton" style="width: 80%;"></div>
+                    <div class="skeleton" style="width: 60%;"></div>
+                    <div class="skeleton" style="width: 70%;"></div>
+                </div>
             </div>
         </div>
         
@@ -242,39 +471,65 @@
                 <h3>Create New Assistant</h3>
                 <form id="assistant-form">
                     <div class="form-group">
-                        <label>Name:</label>
-                        <input type="text" class="form-control" name="name" required>
+                        <label>Assistant Name:</label>
+                        <input type="text" class="form-control" name="name" placeholder="e.g., main, sales, support" required>
                     </div>
                     <div class="form-group">
                         <label>System Prompt:</label>
-                        <textarea class="form-control" name="system_prompt" required></textarea>
+                        <textarea class="form-control" name="system_prompt" placeholder="Define the AI assistant's behavior and knowledge..." required></textarea>
                     </div>
-                    <button type="submit" class="btn btn-success">Create Assistant</button>
+                    <button type="submit" class="btn btn-success">
+                        <span>✨</span> Create Assistant
+                    </button>
                 </form>
             </div>
             
             <div class="card">
-                <h3>Assistants List</h3>
-                <button class="btn refresh-btn" onclick="loadAssistants()">🔄 Refresh</button>
-                <div id="assistants-list" class="loading">Loading assistants...</div>
+                <div style="display: flex; justify-content: between; align-items: center; margin-bottom: 1.5rem;">
+                    <h3 style="margin: 0;">Assistants List</h3>
+                    <button class="btn refresh-btn" onclick="loadAssistants()">
+                        <span>🔄</span> Refresh
+                    </button>
+                </div>
+                <div id="assistants-list" class="loading">
+                    <div class="skeleton" style="height: 2rem; margin-bottom: 1rem;"></div>
+                    <div class="skeleton" style="height: 2rem; margin-bottom: 1rem;"></div>
+                    <div class="skeleton" style="height: 2rem;"></div>
+                </div>
             </div>
         </div>
         
         <!-- Users Tab -->
         <div id="users" class="tab-content">
             <div class="card">
-                <h3>Users</h3>
-                <button class="btn refresh-btn" onclick="loadUsers()">🔄 Refresh</button>
-                <div id="users-list" class="loading">Loading users...</div>
+                <div style="display: flex; justify-content: between; align-items: center; margin-bottom: 1.5rem;">
+                    <h3 style="margin: 0;">Registered Users</h3>
+                    <button class="btn refresh-btn" onclick="loadUsers()">
+                        <span>🔄</span> Refresh
+                    </button>
+                </div>
+                <div id="users-list" class="loading">
+                    <div class="skeleton" style="height: 2rem; margin-bottom: 1rem;"></div>
+                    <div class="skeleton" style="height: 2rem; margin-bottom: 1rem;"></div>
+                    <div class="skeleton" style="height: 2rem;"></div>
+                </div>
             </div>
         </div>
         
         <!-- Dialogs Tab -->
         <div id="dialogs" class="tab-content">
             <div class="card">
-                <h3>Recent Dialogs</h3>
-                <button class="btn refresh-btn" onclick="loadDialogs()">🔄 Refresh</button>
-                <div id="dialogs-list" class="loading">Loading dialogs...</div>
+                <div style="display: flex; justify-content: between; align-items: center; margin-bottom: 1.5rem;">
+                    <h3 style="margin: 0;">Recent Dialogs</h3>
+                    <button class="btn refresh-btn" onclick="loadDialogs()">
+                        <span>🔄</span> Refresh
+                    </button>
+                </div>
+                <div id="dialogs-list" class="loading">
+                    <div class="skeleton" style="height: 2rem; margin-bottom: 1rem;"></div>
+                    <div class="skeleton" style="height: 2rem; margin-bottom: 1rem;"></div>
+                    <div class="skeleton" style="height: 2rem;"></div>
+                </div>
             </div>
         </div>
     </main>
@@ -354,11 +609,20 @@
         // Load Recent Activity
         async function loadRecentActivity() {
             try {
-                const dialogs = await apiCall('dialogs?limit=10');
-                const activity = dialogs.map(d => 
-                    `${new Date(d.timestamp).toLocaleString()}: User ${d.tg_id} - ${d.content?.substring(0, 50)}...`
-                ).join('<br>');
-                document.getElementById('recent-activity').innerHTML = activity || 'No recent activity';
+                const dialogs = await apiCall('dialogs?limit=8');
+                const html = dialogs.length > 0 
+                    ? `<div class="activity-feed">
+                         ${dialogs.map(d => `
+                           <div class="activity-item">
+                             <div class="activity-time">${new Date(d.timestamp).toLocaleString()}</div>
+                             <div class="activity-content">
+                               <strong>User ${d.tg_id}</strong> (${d.role}): ${d.content?.substring(0, 80)}${d.content?.length > 80 ? '...' : ''}
+                             </div>
+                           </div>
+                         `).join('')}
+                       </div>`
+                    : '<div class="message">No recent activity</div>';
+                document.getElementById('recent-activity').innerHTML = html;
             } catch (error) {
                 document.getElementById('recent-activity').innerHTML = '<div class="message error">Failed to load activity</div>';
             }
@@ -370,19 +634,26 @@
                 const assistants = await apiCall('assistants');
                 const html = assistants.length > 0 
                     ? `<table class="data-table">
-                         <thead><tr><th>Name</th><th>Type</th><th>Active</th><th>Created</th></tr></thead>
+                         <thead>
+                           <tr>
+                             <th>Name</th>
+                             <th>Type</th>
+                             <th>Status</th>
+                             <th>Created</th>
+                           </tr>
+                         </thead>
                          <tbody>
                            ${assistants.map(a => `
                              <tr>
-                               <td>${a.name}</td>
+                               <td><strong>${a.name}</strong></td>
                                <td>${a.type}</td>
-                               <td>${a.is_active ? '✅' : '❌'}</td>
+                               <td>${a.is_active ? '✅ Active' : '❌ Inactive'}</td>
                                <td>${new Date(a.created_at).toLocaleDateString()}</td>
                              </tr>
                            `).join('')}
                          </tbody>
                        </table>`
-                    : '<div class="message">No assistants found</div>';
+                    : '<div class="message">No assistants found. Create your first assistant above.</div>';
                 document.getElementById('assistants-list').innerHTML = html;
             } catch (error) {
                 document.getElementById('assistants-list').innerHTML = '<div class="message error">Failed to load assistants</div>';
@@ -395,13 +666,21 @@
                 const users = await apiCall('users');
                 const html = users.length > 0 
                     ? `<table class="data-table">
-                         <thead><tr><th>ID</th><th>Name</th><th>Last Activity</th></tr></thead>
+                         <thead>
+                           <tr>
+                             <th>ID</th>
+                             <th>Name</th>
+                             <th>Last Activity</th>
+                             <th>Registered</th>
+                           </tr>
+                         </thead>
                          <tbody>
                            ${users.map(u => `
                              <tr>
-                               <td>${u.tg_id}</td>
-                               <td>${u.full_name || 'N/A'}</td>
+                               <td><code>${u.tg_id}</code></td>
+                               <td>${u.full_name || '—'}</td>
                                <td>${u.last_activity ? new Date(u.last_activity).toLocaleDateString() : 'Never'}</td>
+                               <td>${new Date(u.created_at).toLocaleDateString()}</td>
                              </tr>
                            `).join('')}
                          </tbody>
@@ -419,14 +698,30 @@
                 const dialogs = await apiCall('dialogs');
                 const html = dialogs.length > 0 
                     ? `<table class="data-table">
-                         <thead><tr><th>Time</th><th>User</th><th>Role</th><th>Message</th></tr></thead>
+                         <thead>
+                           <tr>
+                             <th>Time</th>
+                             <th>User</th>
+                             <th>Role</th>
+                             <th>Message</th>
+                           </tr>
+                         </thead>
                          <tbody>
                            ${dialogs.map(d => `
                              <tr>
-                               <td>${new Date(d.timestamp).toLocaleString()}</td>
-                               <td>${d.tg_id}</td>
-                               <td>${d.role}</td>
-                               <td>${d.content?.substring(0, 100)}...</td>
+                               <td style="white-space: nowrap;">${new Date(d.timestamp).toLocaleString()}</td>
+                               <td><code>${d.tg_id}</code></td>
+                               <td>
+                                 <span style="
+                                   background: ${d.role === 'user' ? '#dbeafe' : d.role === 'assistant' ? '#dcfce7' : '#f3e8ff'};
+                                   color: ${d.role === 'user' ? '#1e40af' : d.role === 'assistant' ? '#166534' : '#7e22ce'};
+                                   padding: 0.25rem 0.5rem;
+                                   border-radius: 4px;
+                                   font-size: 0.8rem;
+                                   font-weight: 500;
+                                 ">${d.role}</span>
+                               </td>
+                               <td>${d.content?.substring(0, 100)}${d.content?.length > 100 ? '...' : ''}</td>
                              </tr>
                            `).join('')}
                          </tbody>
@@ -478,7 +773,7 @@
                     loadStats();
                     loadRecentActivity();
                 }
-            }, 10000); // Refresh every 10 seconds
+            }, 10000);
         }
         
         // Initialize
