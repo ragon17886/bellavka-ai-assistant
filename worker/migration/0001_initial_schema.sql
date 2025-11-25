@@ -95,12 +95,10 @@ CREATE TABLE scheduled_actions (
 );
 
 -- Конфигурация фильтров для поиска по фото
-CREATE TABLE filter_config (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  type TEXT NOT NULL CHECK(type IN ('category', 'color', 'size', 'material')),
-  name TEXT NOT NULL,
-  slug TEXT NOT NULL,
-  group_name TEXT,                 -- Только для размеров: 'standard', 'plus_size'
-  hex_color TEXT,                  -- Только для цветов
-  is_active BOOLEAN DEFAULT 1
+CREATE TABLE IF NOT EXISTS catalog_filters (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    slug TEXT NOT NULL,
+    parentId TEXT,                    -- Только для категорий
+    type TEXT NOT NULL
 );
